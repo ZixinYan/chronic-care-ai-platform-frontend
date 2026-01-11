@@ -1,9 +1,7 @@
 package com.zixin.accountapi.po;
 
 import com.alibaba.fastjson2.JSON;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.Version;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.util.Date;
@@ -11,6 +9,7 @@ import java.util.Date;
 @Data
 @TableName("`care_platform_user`")
 public class Account {
+    @TableId(type = IdType.ASSIGN_ID)
     private Long accountId;
     private String username;
     private String nickname;

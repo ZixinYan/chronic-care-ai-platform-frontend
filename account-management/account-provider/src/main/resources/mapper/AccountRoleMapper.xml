@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.zixin.account.mapper.UserRoleMapper">
+
+    <select id="selectRoleCodesByUserId" resultType="java.lang.Integer">
+        select role_code
+        from care_platform_user_role
+        where user_id = #{userId}
+    </select>
+
+</mapper>

@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -24,9 +26,11 @@ public class LoginResponse extends BaseResponse {
         private String address;
         private String IdCard;
         private Date birthday;
+        private List<Integer> role;
+        private Set<String> permission;
         private JSON ext;
 
-        public LoginUserDTO(Long userId, String username, String nickname, String email, Integer gender, String avatarUrl, String address, Date birthday,String idcard, JSON ext) {
+        public LoginUserDTO(Long userId, String username, String nickname, String email, Integer gender, String avatarUrl, String address, Date birthday,String idcard, List<Integer> role, Set<String> permission, JSON ext) {
             this.userId = userId;
             this.username = username;
             this.nickname = nickname;
@@ -36,6 +40,8 @@ public class LoginResponse extends BaseResponse {
             this.address = address;
             this.birthday = birthday;
             this.IdCard = idcard;
+            this.role = role;
+            this.permission = permission;
             this.ext = ext;
         }
     }

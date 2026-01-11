@@ -26,6 +26,7 @@
         <module>third-party-service</module>
         <module>utils</module>
         <module>gateway</module>
+        <module>auth-server</module>
     </modules>
 
     <dependencyManagement>

@@ -7,8 +7,13 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zixin.accountapi.api.AccountManagementAPI;
 import com.zixin.accountapi.dto.*;
+import com.zixin.accountapi.enums.Action;
+import com.zixin.accountapi.enums.RoleCode;
 import com.zixin.accountapi.po.Account;
+import com.zixin.accountapi.po.RolePermission;
 import com.zixin.accountprovider.mapper.AccountMapper;
+import com.zixin.accountprovider.mapper.AccountRoleMapper;
+import com.zixin.accountprovider.mapper.RolePermissionMapper;
 import com.zixin.accountprovider.utils.AccountUtils;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -17,54 +22,84 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @DubboService
 public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> implements AccountManagementAPI {
-    private final AccountUtils accountUtils;
 
-    AccountServiceImpl(AccountUtils accountUtils, AccountMapper accountMapper){
-        this.accountUtils = accountUtils;
+    private final AccountRoleMapper accountRoleMapper;
+    private final RolePermissionMapper rolePermissionMapper;
+
+    public AccountServiceImpl(AccountRoleMapper accountRoleMapper, RolePermissionMapper rolePermissionMapper) {
+        this.accountRoleMapper = accountRoleMapper;
+        this.rolePermissionMapper = rolePermissionMapper;
     }
 
+
     @Override
-    public LoginResponse login(LoginRequest logInRequest) {
-        String loginAccount = logInRequest.getLoginAccount();
-        String password = logInRequest.getPassword();
-        Account account = new Account();
+    public LoginResponse login(LoginRequest loginRequest) {
+        String loginAccount = loginRequest.getLoginAccount();
+        String password = loginRequest.getPassword();
         LoginResponse loginResponse = new LoginResponse();
-        // 根据手机号和用户名获取账户信息
-        try {
-            account = this.baseMapper.selectOne(new QueryWrapper<Account>()
-                    .eq("username", loginAccount).or().eq("phone", loginAccount).or().eq("id_card", loginAccount));
-        }
-        catch (Exception e){
-            log.error("fail to query account by loginAccount:{},error:{}",loginAccount,e.getMessage());
+
+        // 1. 校验请求参数
+        if (loginAccount == null || loginAccount.isEmpty() || password == null || password.isEmpty()) {
             loginResponse.setCode(ToBCodeEnum.FAIL);
-            loginResponse.setMessage(e.getMessage());
+            loginResponse.setMessage("Login account or password cannot be empty");
+            return loginResponse;
+        }
+
+        Account account;
+        try {
+            // 2. 根据用户名/手机号/身份证查找账号
+            account = this.baseMapper.selectOne(new QueryWrapper<Account>()
+                    .eq("username", loginAccount)
+                    .or().eq("phone", loginAccount)
+                    .or().eq("id_card", loginAccount));
+        } catch (Exception e) {
+            log.error("Fail to query account by loginAccount:{}, error:{}", loginAccount, e.getMessage());
+            loginResponse.setCode(ToBCodeEnum.FAIL);
+            loginResponse.setMessage("Database query failed: " + e.getMessage());
             return loginResponse;
         }
 
         if (account == null) {
-            log.info("fail to login, account: {}", loginAccount);
+            log.info("Fail to login, account not found: {}", loginAccount);
             loginResponse.setCode(ToBCodeEnum.FAIL);
-            loginResponse.setMessage("account is null");
+            loginResponse.setMessage("Account not found");
             return loginResponse;
         }
-        // 校验密码
-        String targetPassword = account.getPassword();
+
+        // 3. 校验密码
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        if (!passwordEncoder.matches(password, targetPassword)) {
-            log.info("password is wrong, account: {}", loginAccount);
+        if (!passwordEncoder.matches(password, account.getPassword())) {
+            log.info("Password is wrong, account: {}", loginAccount);
+            loginResponse.setCode(ToBCodeEnum.FAIL);
+            loginResponse.setMessage("Incorrect password");
             return loginResponse;
         }
-        // 登录信息封装
-        loginResponse.setData(new LoginResponse.LoginUserDTO(
+
+        // 4. 查询用户角色和权限
+        List<Integer> roleCodes = accountRoleMapper.selectRoleCodesByUserId(account.getAccountId());
+        // roleCodes 示例：[1, 2] 对应 DOCTOR, PATIENT
+
+        Set<String> permissions = new HashSet<>();
+        if (!roleCodes.isEmpty()) {
+            // 查询角色对应的权限
+            List<RolePermission> rolePermissions = rolePermissionMapper.selectByRoleCodes(roleCodes);
+            for (RolePermission rp : rolePermissions) {
+                // 将 roleCode + action 转换为权限字符串，例如 DOCTOR:READ
+                String roleName = RoleCode.fromCode(rp.getRoleCode()).name();
+                String actionName = Action.fromCode(rp.getActionCode()).name();
+                permissions.add(roleName + ":" + actionName);
+            }
+        }
+
+        // 5. 封装返回用户信息
+        LoginResponse.LoginUserDTO userDTO = new LoginResponse.LoginUserDTO(
                 account.getAccountId(),
                 account.getUsername(),
                 account.getNickname(),
@@ -74,12 +109,20 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 account.getAddress(),
                 account.getBirthday(),
                 account.getIdCard(),
+                roleCodes,
+                permissions,
                 account.getExt()
-        ));
+        );
+
+
+        loginResponse.setData(userDTO);
         loginResponse.setCode(ToBCodeEnum.SUCCESS);
-        log.info("loginResponse: {}", loginResponse);
+        loginResponse.setMessage("Login successful");
+        log.info("Login successful: {}", loginAccount);
+
         return loginResponse;
     }
+
 
     @Override
     public RegisterResponse register(RegisterRequest registerRequest) {
@@ -145,7 +188,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         Account account = new Account();
 
         UpdateUserInfoResponse updateUserInfoResponse = new UpdateUserInfoResponse();
-        if(accountUtils.validateUpdateData(updateUserInfoRequest.getUpdateData())){
+        if(AccountUtils.validateUpdateData(updateUserInfoRequest.getUpdateData())){
             log.error("illegal update data,{}", updateUserInfoRequest.getUpdateData());
             updateUserInfoResponse.setCode(ToBCodeEnum.FAIL);
             updateUserInfoResponse.setMessage("illegal update data");
@@ -232,4 +275,6 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         deleteUserResponse.setCode(ToBCodeEnum.SUCCESS);
         return deleteUserResponse;
     }
+
+
 }

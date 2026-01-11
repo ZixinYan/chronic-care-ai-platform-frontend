@@ -12,11 +12,11 @@ import java.util.Objects;
 
 @Slf4j
 @Service
-public class AccountUtils  extends ServiceImpl<AccountMapper, Account> {
+public final class AccountUtils  extends ServiceImpl<AccountMapper, Account> {
     /**
      * 校验更新字符是否符合预期
      */
-    public boolean validateUpdateData(Map<String, Objects> updateData) {
+    public static boolean validateUpdateData(Map<String, Objects> updateData) {
         return updateData.keySet()
                 .stream()
                 .allMatch(Enum.UpdateUserField::contains);
