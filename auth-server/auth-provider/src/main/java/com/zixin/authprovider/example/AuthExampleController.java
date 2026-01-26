@@ -4,6 +4,8 @@ import com.zixin.authapi.api.JwtAPI;
 import com.zixin.authapi.api.TokenValidationAPI;
 import com.zixin.authprovider.annotation.RequirePermission;
 import com.zixin.authprovider.annotation.RequireRole;
+import com.zixin.utils.exception.ToBCodeEnum;
+
 import dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +56,7 @@ public class AuthExampleController {
         // 生成Token对
         GenTokenResponse response = jwtAPI.genToken(request);
 
-        if (response.getCode().isSuccess()) {
+        if (response.getCode() == ToBCodeEnum.SUCCESS) {
             log.info("Login successful for user: {}, userId: {}", username, userId);
         } else {
             log.error("Login failed for user: {}, reason: {}", username, response.getMessage());
@@ -74,7 +76,7 @@ public class AuthExampleController {
 
         RefreshTokenResponse response = jwtAPI.refreshToken(request);
 
-        if (response.getCode().isSuccess()) {
+        if (response.getCode() == ToBCodeEnum.SUCCESS) {
             log.info("Token refreshed successfully");
         } else {
             log.error("Token refresh failed: {}", response.getMessage());
@@ -115,7 +117,7 @@ public class AuthExampleController {
 
         ValidateTokenResponse response = tokenValidationAPI.revokeToken(request);
 
-        if (response.getCode().isSuccess()) {
+        if (response.getCode() == ToBCodeEnum.SUCCESS) {
             log.info("Logout successful");
         } else {
             log.error("Logout failed: {}", response.getMessage());
