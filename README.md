@@ -1,5 +1,5 @@
 
-#  chromic-care-ai-platform
+#  chromic-care-ai-platform 施工ing
 
 **AI-driven Chronic Disease Management & Medical Assistance Platform**
 
