@@ -1,0 +1,28 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: doctor-service-consumer
+  
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+# Dubbo配置
+dubbo:
+  application:
+    name: doctor-service-consumer
+  registry:
+    address: nacos://localhost:8848
+  consumer:
+    check: false
+    timeout: 30000
+
+# 日志配置
+logging:
+  level:
+    com.zixin.doctorconsumer: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

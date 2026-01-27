@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zixin.messageprovider.mapper.MessageMapper">
+    
+    <!-- 查询用户收到的消息列表 -->
+    <select id="selectInboxMessages" resultType="com.zixin.messageapi.po.Message">
+        SELECT *
+        FROM message_inbox
+        WHERE receiver_id = #{receiverId}
+          AND is_broadcast = 0
+          AND deleted = 0
+        <if test="messageType != null">
+            AND message_type = #{messageType}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+    
+    <!-- 查询用户发送的消息列表 -->
+    <select id="selectSentMessages" resultType="com.zixin.messageapi.po.Message">
+        SELECT *
+        FROM message_inbox
+        WHERE sender_id = #{senderId}
+          AND deleted = 0
+        <if test="messageType != null">
+            AND message_type = #{messageType}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+    
+    <!-- 统计用户未读消息数量 -->
+    <select id="countUnreadMessages" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM message_inbox
+        WHERE receiver_id = #{receiverId}
+          AND is_broadcast = 0
+          AND status = 0
+          AND deleted = 0
+    </select>
+    
+</mapper>

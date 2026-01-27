@@ -1,0 +1,28 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: message-system-consumer
+  
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+# Dubbo配置
+dubbo:
+  application:
+    name: message-system-consumer
+  registry:
+    address: nacos://localhost:8848
+  consumer:
+    check: false
+    timeout: 30000
+
+# 日志配置
+logging:
+  level:
+    com.zixin.messageconsumer: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

@@ -63,6 +63,8 @@ public class Result<T> implements Serializable {
 
     public static Result error(String reason) {return new Result<>(-1, reason,null);}
 
+
+
     /**
      * 设置数据
      * @param data

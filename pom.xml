@@ -27,6 +27,8 @@
         <module>utils</module>
         <module>gateway</module>
         <module>auth-server</module>
+        <module>message-system</module>
+        <module>doctor-service</module>
     </modules>
 
     <dependencyManagement>

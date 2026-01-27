@@ -8,7 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * 用户信息拦截器 - 基础版
+ * 用户信息拦截器
  * 从Gateway注入的请求头中提取用户信息，存储到ThreadLocal
  * 
  * 各个下游服务可以继承此类，也可以直接使用此类
