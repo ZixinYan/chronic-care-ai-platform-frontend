@@ -12,9 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * JWT服务实现类
@@ -50,14 +48,26 @@ public class JwtServiceImpl implements JwtAPI {
         }
 
         try {
-            // 2. 准备角色信息
+            // 2. 准备角色信息和权限信息
             List<String> roles = request.getRoles();
             if (roles == null) {
                 roles = new ArrayList<>();
             }
+            
+            Set<String> permissions = request.getPermissions();
+            if (permissions == null) {
+                permissions = new HashSet<>();
+            }
+            
+            log.info("Generating token for user: {}, roles: {}, permissions count: {}", 
+                    request.getUserId(), roles, permissions.size());
 
             // 3. 生成Token对(Access Token + Refresh Token)
-            Map<String, String> tokens = jwtUtils.generateTokenPair(request.getUserId(), roles);
+            Map<String, String> tokens = jwtUtils.generateTokenPair(
+                    request.getUserId(), 
+                    request.getUsername(),
+                    roles, 
+                    permissions);
             String accessToken = tokens.get("accessToken");
             String refreshToken = tokens.get("refreshToken");
 
@@ -119,15 +129,19 @@ public class JwtServiceImpl implements JwtAPI {
                 return response;
             }
 
-            // 3. 从旧的Refresh Token中提取角色信息
+            // 3. 从旧的Refresh Token中提取角色信息和用户名
             List<String> roles = jwtUtils.getRolesFromToken(request.getRefreshToken());
+            String username = jwtUtils.getUsernameFromToken(request.getRefreshToken());
+            
+            // 4. 重新从数据库加载最新的权限信息
+            Set<String> permissions = jwtUtils.loadAndCacheUserAuthorities(userId);
 
-            // 4. 生成新的Token对
-            Map<String, String> tokens = jwtUtils.generateTokenPair(userId, roles);
+            // 5. 生成新的Token对
+            Map<String, String> tokens = jwtUtils.generateTokenPair(userId, username, roles, permissions);
             String newAccessToken = tokens.get("accessToken");
             String newRefreshToken = tokens.get("refreshToken");
 
-            // 5. 验证生成结果
+            // 6. 验证生成结果
             if (newAccessToken == null || newAccessToken.isEmpty() || 
                 newRefreshToken == null || newRefreshToken.isEmpty()) {
                 response.setCode(ToBCodeEnum.FAIL);
@@ -136,7 +150,7 @@ public class JwtServiceImpl implements JwtAPI {
                 return response;
             }
 
-            // 6. 构造响应
+            // 7. 构造响应
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("Token refreshed successfully");
             response.setAccessToken(newAccessToken);

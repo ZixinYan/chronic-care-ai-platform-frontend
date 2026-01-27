@@ -48,20 +48,16 @@ public class JwtUtils {
 
     /**
      * 生成Access Token
-     * 包含用户ID、角色和权限信息
+     * 包含用户ID、用户名、角色和权限信息
      *
      * @param userId 用户ID
+     * @param username 用户名
      * @param roles 角色列表
+     * @param permissions 权限集合(直接传入,不再从数据库查询)
      * @return Access Token
      */
-    public String generateAccessToken(Long userId, List<String> roles) {
-        // 1. 从缓存获取权限，如果缓存不存在则从数据库加载
-        Set<String> authorities = getUserAuthorities(userId);
-        if (authorities == null || authorities.isEmpty()) {
-            authorities = loadAndCacheUserAuthorities(userId);
-        }
-
-        // 2. 构造 claims
+    public String generateAccessToken(Long userId, String username, List<String> roles, Set<String> permissions) {
+        // 1. 构造 claims
         Instant now = Instant.now();
         Instant expiresAt = now.plus(accessTokenExpiration, ChronoUnit.SECONDS);
 
@@ -69,43 +65,62 @@ public class JwtUtils {
                 .subject(userId.toString())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
-                .claim("type", "access")
-                .claim("authorities", new ArrayList<>(authorities));
+                .claim("type", "access");
+
+        // 添加用户名
+        if (username != null && !username.isEmpty()) {
+            claimsBuilder.claim("username", username);
+        }
 
         // 添加角色信息
         if (roles != null && !roles.isEmpty()) {
             claimsBuilder.claim("roles", roles);
         }
 
+        // 添加权限信息(直接使用传入的permissions)
+        if (permissions != null && !permissions.isEmpty()) {
+            claimsBuilder.claim("authorities", new ArrayList<>(permissions));
+            // 同时缓存到Redis供其他场景使用
+            setUserAuthorities(userId, permissions);
+        }
+
         JwtClaimsSet claimsSet = claimsBuilder.build();
 
-        // 3. 生成 token
+        // 2. 生成 token
         String token = jwtEncoder.encode(JwtEncoderParameters.from(claimsSet)).getTokenValue();
-        log.debug("Generated access token for userId: {}, expires at: {}", userId, expiresAt);
+        log.debug("Generated access token for userId: {}, username: {}, roles: {}, permissions count: {}, expires at: {}", 
+                userId, username, roles, permissions != null ? permissions.size() : 0, expiresAt);
         return token;
     }
 
     /**
      * 生成Refresh Token
-     * 只包含用户ID和token ID，用于刷新Access Token
+     * 包含用户ID、角色和token ID，用于刷新Access Token
      *
      * @param userId 用户ID
+     * @param roles 角色列表(用于刷新时重新生成Access Token)
      * @return Refresh Token
      */
-    public String generateRefreshToken(Long userId) {
+    public String generateRefreshToken(Long userId, List<String> roles) {
         // 生成唯一的token ID
         String tokenId = UUID.randomUUID().toString();
 
         Instant now = Instant.now();
         Instant expiresAt = now.plus(refreshTokenExpiration, ChronoUnit.SECONDS);
 
-        JwtClaimsSet claimsSet = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .subject(userId.toString())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
                 .id(tokenId)
-                .claim("type", "refresh")
-                .build();
+                .claim("type", "refresh");
+
+        // 添加角色信息(用于刷新Token时使用)
+        if (roles != null && !roles.isEmpty()) {
+            claimsBuilder.claim("roles", roles);
+        }
+
+        JwtClaimsSet claimsSet = claimsBuilder.build();
 
         String refreshToken = jwtEncoder.encode(JwtEncoderParameters.from(claimsSet)).getTokenValue();
 
@@ -113,7 +128,8 @@ public class JwtUtils {
         String key = REFRESH_TOKEN_KEY_PREFIX + userId + ":" + tokenId;
         redisTemplate.opsForValue().set(key, refreshToken, refreshTokenExpiration, TimeUnit.SECONDS);
 
-        log.debug("Generated refresh token for userId: {}, tokenId: {}, expires at: {}", userId, tokenId, expiresAt);
+        log.debug("Generated refresh token for userId: {}, roles: {}, tokenId: {}, expires at: {}", 
+                userId, roles, tokenId, expiresAt);
         return refreshToken;
     }
 
@@ -121,18 +137,21 @@ public class JwtUtils {
      * 生成Token对(Access Token + Refresh Token)
      *
      * @param userId 用户ID
+     * @param username 用户名
      * @param roles 角色列表
+     * @param permissions 权限集合
      * @return Map包含accessToken和refreshToken
      */
-    public Map<String, String> generateTokenPair(Long userId, List<String> roles) {
-        String accessToken = generateAccessToken(userId, roles);
-        String refreshToken = generateRefreshToken(userId);
+    public Map<String, String> generateTokenPair(Long userId, String username, List<String> roles, Set<String> permissions) {
+        String accessToken = generateAccessToken(userId, username, roles, permissions);
+        String refreshToken = generateRefreshToken(userId, roles);
 
         Map<String, String> tokens = new HashMap<>();
         tokens.put("accessToken", accessToken);
         tokens.put("refreshToken", refreshToken);
 
-        log.info("Generated token pair for userId: {}", userId);
+        log.info("Generated token pair for userId: {}, username: {}, roles: {}, permissions count: {}", 
+                userId, username, roles, permissions != null ? permissions.size() : 0);
         return tokens;
     }
 
@@ -363,6 +382,22 @@ public class JwtUtils {
         } catch (JwtException e) {
             log.error("Failed to extract authorities from token: {}", e.getMessage());
             return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * 从Token获取用户名
+     *
+     * @param token JWT Token
+     * @return 用户名，如果不存在返回null
+     */
+    public String getUsernameFromToken(String token) {
+        try {
+            Jwt jwt = jwtDecoder.decode(token);
+            return jwt.getClaim("username");
+        } catch (JwtException e) {
+            log.error("Failed to extract username from token: {}", e.getMessage());
+            return null;
         }
     }
 }

@@ -109,26 +109,26 @@ public class SSOServiceImpl implements LoginWithPhoneAPI {
 
     /**
      * 将角色code转换为角色名称
+     * 使用RoleCode枚举进行转换
      * 
-     * @param roleCodes 角色code列表
-     * @return 角色名称列表
+     * @param roleCodes 角色code列表 (1-DOCTOR, 2-PATIENT, 3-FAMILY)
+     * @return 角色名称列表 (["DOCTOR", "PATIENT", "FAMILY"])
      */
     private List<String> convertRoleCodesToNames(List<Integer> roleCodes) {
         if (roleCodes == null || roleCodes.isEmpty()) {
             return new ArrayList<>();
         }
 
-        // 角色code到角色名称的映射
-        // TODO: 这里应该从数据库或配置中获取映射关系
-        Map<Integer, String> roleMapping = new HashMap<>();
-        roleMapping.put(1, "ADMIN");
-        roleMapping.put(2, "USER");
-        roleMapping.put(3, "MANAGER");
-        roleMapping.put(4, "DOCTOR");
-        roleMapping.put(5, "PATIENT");
-
         return roleCodes.stream()
-                .map(code -> roleMapping.getOrDefault(code, "USER"))
+                .map(code -> {
+                    try {
+                        // 使用RoleCode枚举进行转换
+                        return com.zixin.accountapi.enums.RoleCode.fromCode(code).name();
+                    } catch (Exception e) {
+                        log.warn("Unknown role code: {}, fallback to USER", code);
+                        return "USER";
+                    }
+                })
                 .collect(Collectors.toList());
     }
 
