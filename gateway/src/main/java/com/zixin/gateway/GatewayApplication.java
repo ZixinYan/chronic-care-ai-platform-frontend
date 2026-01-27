@@ -6,6 +6,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @SpringBootApplication
 @EnableDiscoveryClient
+@org.apache.dubbo.config.spring.context.annotation.EnableDubbo
 public class GatewayApplication {
 
     public static void main(String[] args) {

@@ -8,6 +8,20 @@ spring:
   main:
     web-application-type: reactive
 
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 3000
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1
+          max-idle: 8
+          min-idle: 0
+
   cloud:
     nacos:
       discovery:
@@ -46,6 +60,15 @@ spring:
         enabled: true
 
       routes:
+        # 认证服务路由
+        - id: auth-service
+          uri: lb://auth-provider
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=1
+
+        # 账户服务路由
         - id: account-service
           uri: lb://account-service
           predicates:
@@ -53,9 +76,32 @@ spring:
           filters:
             - StripPrefix=1
 
+        # 订单服务路由
         - id: order-service
           uri: lb://order-service
           predicates:
             - Path=/order/**
           filters:
             - StripPrefix=1
+
+# Dubbo配置
+dubbo:
+  application:
+    name: api-gateway
+  registry:
+    address: nacos://192.168.35.128:8848
+    parameters:
+      namespace: 48126882-0e93-4746-b265-ab232bf8d85e
+      group: DEV_GROUP
+  protocol:
+    name: dubbo
+    port: -1
+  consumer:
+    check: false
+    timeout: 3000
+
+# 日志配置
+logging:
+  level:
+    com.zixin.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
