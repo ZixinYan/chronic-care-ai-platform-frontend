@@ -1,0 +1,21 @@
+package com.zixin.healthcenterprovider;
+
+import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+/**
+ * 健康报告中心 Provider 启动类
+ * 
+ * @author zixin
+ */
+@SpringBootApplication
+@EnableDubbo
+@EnableDiscoveryClient
+public class HealthCenterProviderApplication {
+    
+    public static void main(String[] args) {
+        SpringApplication.run(HealthCenterProviderApplication.class, args);
+    }
+}
