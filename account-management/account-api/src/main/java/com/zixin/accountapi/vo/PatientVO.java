@@ -21,6 +21,11 @@ public class PatientVO {
     private Long accountId;
     
     /**
+     * 主治医生ID
+     */
+    private Long attendingDoctorId;
+    
+    /**
      * 用户名
      */
     private String username;

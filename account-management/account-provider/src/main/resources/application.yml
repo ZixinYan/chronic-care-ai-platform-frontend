@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: account-provider
+
+# 用户角色配置
+account:
+  role:
+    # 用户注册时的默认角色
+    # 如果用户注册时没有指定角色，会自动分配以下角色
+    # 角色代码:
+    #   1 - ADMIN (管理员)
+    #   2 - DOCTOR (医生)
+    #   3 - PATIENT (患者)
+    default-roles:
+      - 3  # 默认为患者角色

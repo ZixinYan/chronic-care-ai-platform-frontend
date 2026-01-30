@@ -1,5 +1,6 @@
 package com.zixin.utils.security;
 
+import com.zixin.utils.context.UserInfoManager;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
@@ -21,7 +22,6 @@ import java.util.Set;
  * 
  * 使用此切面需要:
  * 1. 在pom.xml中添加spring-boot-starter-aop依赖
- * 2. 确保UserInfoInterceptor已注册到拦截器链
  * 3. 在配置类上添加@EnableAspectJAutoProxy
  */
 @Slf4j
@@ -45,7 +45,7 @@ public class PermissionCheckAspect {
         }
         
         // 获取当前用户的权限
-        String authoritiesStr = UserInfoInterceptor.getCurrentUserAuthorities();
+        String authoritiesStr = UserInfoManager.getAuthorities();
         if (authoritiesStr == null || authoritiesStr.isEmpty()) {
             log.warn("User has no authorities, method: {}.{}", 
                     method.getDeclaringClass().getSimpleName(), method.getName());
@@ -63,7 +63,7 @@ public class PermissionCheckAspect {
         boolean hasPermission = checkPermissions(userAuthorities, requiredPermissions, logical);
         
         if (!hasPermission) {
-            Long userId = UserInfoInterceptor.getCurrentUserId();
+            Long userId = UserInfoManager.getUserId();
             log.warn("User {} does not have required permissions. Required: {}, User has: {}, Logical: {}", 
                     userId, Arrays.toString(requiredPermissions), userAuthorities, logical);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, 
@@ -90,7 +90,7 @@ public class PermissionCheckAspect {
         }
         
         // 获取当前用户的角色
-        String rolesStr = UserInfoInterceptor.getCurrentUserRoles();
+        String rolesStr = UserInfoManager.getRoles();
         if (rolesStr == null || rolesStr.isEmpty()) {
             log.warn("User has no roles, method: {}.{}", 
                     method.getDeclaringClass().getSimpleName(), method.getName());
@@ -109,7 +109,7 @@ public class PermissionCheckAspect {
                 logical == RequireRole.Logical.AND ? RequirePermission.Logical.AND : RequirePermission.Logical.OR);
         
         if (!hasRole) {
-            Long userId = UserInfoInterceptor.getCurrentUserId();
+            Long userId = UserInfoManager.getUserId();
             log.warn("User {} does not have required roles. Required: {}, User has: {}, Logical: {}", 
                     userId, Arrays.toString(requiredRoles), userRoles, logical);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, 

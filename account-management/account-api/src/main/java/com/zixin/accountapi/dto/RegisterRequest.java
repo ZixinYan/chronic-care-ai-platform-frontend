@@ -3,6 +3,7 @@ package com.zixin.accountapi.dto;
 import lombok.Data;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 public class RegisterRequest {
@@ -14,4 +15,10 @@ public class RegisterRequest {
     private Integer gender;
     private String idCard;
     private Date birthday;
+    
+    /**
+     * 用户角色列表 (可选)
+     * 如果不传，使用系统默认角色
+     */
+    private List<Integer> roleCodes;
 }

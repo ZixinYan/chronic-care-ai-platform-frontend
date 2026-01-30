@@ -29,6 +29,7 @@
         <module>auth-server</module>
         <module>message-system</module>
         <module>doctor-service</module>
+        <module>health-report-center</module>
     </modules>
 
     <dependencyManagement>

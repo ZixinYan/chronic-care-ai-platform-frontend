@@ -40,8 +40,16 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
 
     private static final String TRACE_ID = "X-Trace-Id";
     private static final String USER_ID = "X-User-Id";
+    private static final String USERNAME = "X-Username";
+    private static final String USER_TYPE = "X-User-Type";
     private static final String USER_ROLES = "X-User-Roles";
     private static final String USER_AUTHORITIES = "X-User-Authorities";
+    private static final String REAL_NAME = "X-Real-Name";
+    private static final String NICKNAME = "X-Nickname";
+    private static final String PHONE = "X-Phone";
+    private static final String EMAIL = "X-Email";
+    private static final String ATTENDING_DOCTOR_ID = "X-Attending-Doctor-Id";
+    private static final String DEPARTMENT_ID = "X-Department-Id";
     
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -88,20 +96,57 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
                     
                     // 验证成功，提取用户信息
                     Long userId = response.getUserId();
+                    String username = response.getUsername();
+                    Integer userType = response.getUserType();
                     List<String> roles = response.getRoles();
                     List<String> authorities = response.getAuthorities();
+                    String realName = response.getRealName();
+                    String nickname = response.getNickname();
+                    String phone = response.getPhone();
+                    String email = response.getEmail();
+                    Long attendingDoctorId = response.getAttendingDoctorId();
+                    Long departmentId = response.getDepartmentId();
                     
-                    log.debug("JWT validated successfully - userId: {}, roles: {}, authorities: {}", 
-                            userId, roles, authorities);
+                    log.debug("JWT validated successfully - userId: {}, username: {}, userType: {}, roles: {}", 
+                            userId, username, userType, roles);
                     
-                    // 5. 将用户信息注入到下游请求头
-                    ServerHttpRequest modifiedRequest = exchange.getRequest()
-                            .mutate()
+                    // 5. 将用户完整信息注入到下游请求头
+                    ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate()
                             .header(TRACE_ID, finalTraceId)
-                            .header(USER_ID, String.valueOf(userId))
-                            .header(USER_ROLES, roles != null ? String.join(",", roles) : "")
-                            .header(USER_AUTHORITIES, authorities != null ? String.join(",", authorities) : "")
-                            .build();
+                            .header(USER_ID, String.valueOf(userId));
+                    
+                    if (username != null) {
+                        requestBuilder.header(USERNAME, username);
+                    }
+                    if (userType != null) {
+                        requestBuilder.header(USER_TYPE, String.valueOf(userType));
+                    }
+                    if (roles != null && !roles.isEmpty()) {
+                        requestBuilder.header(USER_ROLES, String.join(",", roles));
+                    }
+                    if (authorities != null && !authorities.isEmpty()) {
+                        requestBuilder.header(USER_AUTHORITIES, String.join(",", authorities));
+                    }
+                    if (realName != null) {
+                        requestBuilder.header(REAL_NAME, realName);
+                    }
+                    if (nickname != null) {
+                        requestBuilder.header(NICKNAME, nickname);
+                    }
+                    if (phone != null) {
+                        requestBuilder.header(PHONE, phone);
+                    }
+                    if (email != null) {
+                        requestBuilder.header(EMAIL, email);
+                    }
+                    if (attendingDoctorId != null) {
+                        requestBuilder.header(ATTENDING_DOCTOR_ID, String.valueOf(attendingDoctorId));
+                    }
+                    if (departmentId != null) {
+                        requestBuilder.header(DEPARTMENT_ID, String.valueOf(departmentId));
+                    }
+                    
+                    ServerHttpRequest modifiedRequest = requestBuilder.build();
                     
                     ServerWebExchange mutatedExchange = exchange.mutate()
                             .request(modifiedRequest)

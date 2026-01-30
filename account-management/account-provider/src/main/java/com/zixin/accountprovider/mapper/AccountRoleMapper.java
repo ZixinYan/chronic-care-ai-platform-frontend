@@ -13,4 +13,9 @@ public interface AccountRoleMapper extends BaseMapper<AccountRole> {
      * 根据 userId 查询角色 code 列表
      */
     List<Integer> selectRoleCodesByUserId(@Param("userId") Long userId);
+    
+    /**
+     * 根据 accountId 删除所有角色关系
+     */
+    void deleteByAccountId(@Param("accountId") Long accountId);
 }

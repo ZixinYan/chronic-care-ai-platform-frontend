@@ -10,7 +10,9 @@ import com.zixin.accountapi.dto.*;
 import com.zixin.accountapi.enums.Action;
 import com.zixin.accountapi.enums.RoleCode;
 import com.zixin.accountapi.po.Account;
+import com.zixin.accountapi.po.AccountRole;
 import com.zixin.accountapi.po.RolePermission;
+import com.zixin.accountprovider.config.RoleConfig;
 import com.zixin.accountprovider.mapper.AccountMapper;
 import com.zixin.accountprovider.mapper.AccountRoleMapper;
 import com.zixin.accountprovider.mapper.RolePermissionMapper;
@@ -18,9 +20,11 @@ import com.zixin.accountprovider.utils.AccountUtils;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +36,9 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
     private final AccountRoleMapper accountRoleMapper;
     private final RolePermissionMapper rolePermissionMapper;
+    
+    @Autowired
+    private RoleConfig roleConfig;
 
     public AccountServiceImpl(AccountRoleMapper accountRoleMapper, RolePermissionMapper rolePermissionMapper) {
         this.accountRoleMapper = accountRoleMapper;
@@ -125,9 +132,11 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public RegisterResponse register(RegisterRequest registerRequest) {
         Account account = new Account();
         RegisterResponse registerResponse = new RegisterResponse();
+        
         // 赋值基础信息
         account.setUsername(registerRequest.getUsername());
         account.setNickname(registerRequest.getNickname());
@@ -136,17 +145,19 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         account.setBirthday(registerRequest.getBirthday());
         account.setGender(registerRequest.getGender());
         account.setIdCard(registerRequest.getIdCard());
+        
         // 加密密码
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         String encodedPassword = passwordEncoder.encode(registerRequest.getPassword());
         account.setPassword(encodedPassword);
-        // 防重校验
+        
+        // 防重校验并插入账户
         try{
             this.baseMapper.insert(account);
         }catch (DuplicateKeyException e){
             log.error("fail to register account, repeated account: {}", account);
             registerResponse.setCode(ToBCodeEnum.FAIL);
-            registerResponse.setMessage(e.getMessage());
+            registerResponse.setMessage("用户名、手机号或身份证已存在");
             return registerResponse;
         }catch (Exception e){
             log.error("fail to register account, db wrong: {}", account);
@@ -154,7 +165,37 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
             registerResponse.setMessage(e.getMessage());
             return registerResponse;
         }
+        
+        // 分配角色
+        List<Integer> roleCodes = registerRequest.getRoleCodes();
+        if (roleCodes == null || roleCodes.isEmpty()) {
+            // 使用默认角色
+            roleCodes = roleConfig.getDefaultRoles();
+            log.info("User {} registered with default roles: {}", account.getUsername(), roleCodes);
+        } else {
+            log.info("User {} registered with specified roles: {}", account.getUsername(), roleCodes);
+        }
+        
+        // 插入用户角色关系
+        if (!roleCodes.isEmpty()) {
+            try {
+                for (Integer roleCode : roleCodes) {
+                    AccountRole accountRole = new AccountRole();
+                    accountRole.setAccountId(account.getAccountId());
+                    accountRole.setRoleCode(roleCode);
+                    accountRole.setCreateTime(new Date());
+                    accountRoleMapper.insert(accountRole);
+                }
+            } catch (Exception e) {
+                log.error("fail to assign roles to account, accountId: {}, error: {}", 
+                        account.getAccountId(), e.getMessage());
+                // 事务会回滚
+                throw new RuntimeException("分配角色失败: " + e.getMessage());
+            }
+        }
+        
         registerResponse.setCode(ToBCodeEnum.SUCCESS);
+        registerResponse.setMessage("注册成功");
         return registerResponse;
     }
 
@@ -274,6 +315,61 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         }
         deleteUserResponse.setCode(ToBCodeEnum.SUCCESS);
         return deleteUserResponse;
+    }
+    
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UpdateUserRolesResponse updateUserRoles(UpdateUserRolesRequest request) {
+        UpdateUserRolesResponse response = new UpdateUserRolesResponse();
+        
+        try {
+            Long accountId = request.getAccountId();
+            List<Integer> newRoleCodes = request.getRoleCodes();
+            
+            if (accountId == null) {
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("账户ID不能为空");
+                return response;
+            }
+            
+            if (newRoleCodes == null || newRoleCodes.isEmpty()) {
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("角色列表不能为空");
+                return response;
+            }
+            
+            // 验证账户是否存在
+            Account account = this.baseMapper.selectById(accountId);
+            if (account == null) {
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("账户不存在");
+                return response;
+            }
+            
+            // 删除用户现有的所有角色
+            accountRoleMapper.deleteByAccountId(accountId);
+            
+            // 插入新的角色
+            for (Integer roleCode : newRoleCodes) {
+                AccountRole accountRole = new AccountRole();
+                accountRole.setAccountId(accountId);
+                accountRole.setRoleCode(roleCode);
+                accountRole.setCreateTime(new Date());
+                accountRoleMapper.insert(accountRole);
+            }
+            
+            response.setCode(ToBCodeEnum.SUCCESS);
+            response.setMessage("更新角色成功");
+            response.setRoleCodes(newRoleCodes);
+            
+            log.info("Update user roles success, accountId: {}, new roles: {}", accountId, newRoleCodes);
+        } catch (Exception e) {
+            log.error("Update user roles failed, error: {}", e.getMessage(), e);
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("更新角色失败: " + e.getMessage());
+        }
+        
+        return response;
     }
 
 

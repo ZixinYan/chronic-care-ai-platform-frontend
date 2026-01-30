@@ -8,19 +8,22 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * 用户信息拦截器
- * 从Gateway注入的请求头中提取用户信息，存储到ThreadLocal
+ * 用户信息拦截器 (已废弃)
  * 
- * 各个下游服务可以继承此类，也可以直接使用此类
+ * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager} 和 {@link com.zixin.utils.interceptor.UserInfoExtractInterceptor}
  * 
- * Gateway会在验证Token后，将用户信息注入到以下请求头：
- * - X-Trace-Id: 链路追踪ID
- * - X-User-Id: 用户ID
- * - X-User-Roles: 角色列表(逗号分隔)
- * - X-User-Authorities: 权限列表(逗号分隔)
+ * 迁移指南:
+ * 旧代码: UserInfoInterceptor.getCurrentUserId()
+ * 新代码: UserInfoManager.getUserId()
+ * 
+ * 旧代码: UserInfoInterceptor.getCurrentUsername()
+ * 新代码: UserInfoManager.getUsername()
+ * 
+ * 该类保留仅为了向后兼容，建议尽快迁移到新的UserInfoManager
  */
 @Slf4j
 @Component
+@Deprecated
 public class UserInfoInterceptor implements HandlerInterceptor {
 
     // 请求头名称常量
@@ -32,7 +35,9 @@ public class UserInfoInterceptor implements HandlerInterceptor {
 
     /**
      * 线程本地变量，用于存储当前请求的用户信息
+     * @deprecated 请使用 UserInfoManager
      */
+    @Deprecated
     private static final ThreadLocal<UserContext> USER_CONTEXT_HOLDER = new ThreadLocal<>();
 
     @Override
@@ -80,65 +85,73 @@ public class UserInfoInterceptor implements HandlerInterceptor {
         USER_CONTEXT_HOLDER.remove();
     }
 
-    // ==================== 静态工具方法 ====================
+    // ==================== 静态工具方法 (已废弃) ====================
 
     /**
-     * 获取完整的用户上下文
+     * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager#getUserContext()}
      */
+    @Deprecated
     public static UserContext getUserContext() {
         return USER_CONTEXT_HOLDER.get();
     }
 
     /**
-     * 获取当前请求的用户ID
+     * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager#getUserId()}
      */
+    @Deprecated
     public static Long getCurrentUserId() {
         UserContext context = USER_CONTEXT_HOLDER.get();
         return context != null ? context.getUserId() : null;
     }
 
     /**
-     * 获取当前请求的用户名
+     * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager#getUsername()}
      */
+    @Deprecated
     public static String getCurrentUsername() {
         UserContext context = USER_CONTEXT_HOLDER.get();
         return context != null ? context.getUsername() : null;
     }
 
     /**
-     * 获取当前请求的用户角色
+     * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager#getRoles()}
      */
+    @Deprecated
     public static String getCurrentUserRoles() {
         UserContext context = USER_CONTEXT_HOLDER.get();
         return context != null ? context.getRoles() : null;
     }
 
     /**
-     * 获取当前请求的用户权限
+     * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager#getAuthorities()}
      */
+    @Deprecated
     public static String getCurrentUserAuthorities() {
         UserContext context = USER_CONTEXT_HOLDER.get();
         return context != null ? context.getAuthorities() : null;
     }
 
     /**
-     * 获取当前请求的追踪ID
+     * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager#getTraceId()}
      */
+    @Deprecated
     public static String getCurrentTraceId() {
         UserContext context = USER_CONTEXT_HOLDER.get();
         return context != null ? context.getTraceId() : null;
     }
 
     /**
-     * 手动设置用户上下文(用于测试或特殊场景)
+     * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager#setUserContext(com.zixin.utils.context.UserInfoContext)}
      */
+    @Deprecated
     public static void setUserContext(UserContext context) {
         USER_CONTEXT_HOLDER.set(context);
     }
 
     /**
-     * 手动清除用户上下文
+     * @deprecated 请使用 {@link com.zixin.utils.context.UserInfoManager#clearUserContext()}
      */
+    @Deprecated
     public static void clearUserContext() {
         USER_CONTEXT_HOLDER.remove();
     }
