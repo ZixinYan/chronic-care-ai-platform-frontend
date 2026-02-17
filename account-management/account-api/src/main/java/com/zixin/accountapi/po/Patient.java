@@ -16,13 +16,13 @@ import java.util.Date;
  * - emergencyPhone: 紧急联系人电话(已加密)
  */
 @Data
-@TableName("patient")
+@TableName("care_platform_patient")
 public class Patient {
     
     /**
      * 患者ID (主键)
      */
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     
     /**

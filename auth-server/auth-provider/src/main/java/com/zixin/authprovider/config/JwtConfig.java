@@ -15,64 +15,75 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
+import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
-/**
- * JWT配置类
- * 使用RSA密钥对进行JWT签名和验证
- */
 @Slf4j
 @Configuration
 public class JwtConfig {
 
-    @Value("${jwt.key-size:2048}")
-    private int keySize;
+    @Value("${jwt.rsa.public-key}")
+    private String publicKeyPem;
 
-    /**
-     * 生成RSA密钥对
-     * 在生产环境中，应该从配置文件或密钥管理服务加载已有的密钥
-     */
+    @Value("${jwt.rsa.private-key}")
+    private String privateKeyPem;
+
     @Bean
-    public KeyPair keyPair() {
+    public RSAPublicKey rsaPublicKey() {
         try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(keySize);
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
-            log.info("RSA KeyPair generated successfully with key size: {}", keySize);
-            return keyPair;
+            String key = publicKeyPem
+                    .replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s+", "");
+
+            byte[] decoded = Base64.getDecoder().decode(key);
+            X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
+            return (RSAPublicKey) KeyFactory.getInstance("RSA").generatePublic(spec);
         } catch (Exception e) {
-            log.error("Failed to generate RSA KeyPair", e);
-            throw new IllegalStateException("Failed to generate RSA KeyPair", e);
+            throw new IllegalStateException("Failed to load RSA public key", e);
+        }
+    }
+
+    @Bean
+    public RSAPrivateKey rsaPrivateKey() {
+        try {
+            String key = privateKeyPem
+                    .replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replaceAll("\\s+", "");
+
+            byte[] decoded = Base64.getDecoder().decode(key);
+            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoded);
+            return (RSAPrivateKey) KeyFactory.getInstance("RSA").generatePrivate(spec);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to load RSA private key", e);
         }
     }
 
     /**
-     * JWT编码器
-     * 用于生成JWT Token
+     * JWT Encoder（签名）
      */
     @Bean
-    public JwtEncoder jwtEncoder(KeyPair keyPair) {
-        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
-        RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
-        
+    public JwtEncoder jwtEncoder(RSAPublicKey publicKey, RSAPrivateKey privateKey) {
         JWK jwk = new RSAKey.Builder(publicKey)
                 .privateKey(privateKey)
                 .build();
-        
-        JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(new JWKSet(jwk));
+
+        JWKSource<SecurityContext> jwkSource =
+                new ImmutableJWKSet<>(new JWKSet(jwk));
+
         return new NimbusJwtEncoder(jwkSource);
     }
 
     /**
-     * JWT解码器
-     * 用于验证和解析JWT Token
+     * JWT Decoder（验签）
      */
     @Bean
-    public JwtDecoder jwtDecoder(KeyPair keyPair) {
-        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+    public JwtDecoder jwtDecoder(RSAPublicKey publicKey) {
         return NimbusJwtDecoder.withPublicKey(publicKey).build();
     }
 }

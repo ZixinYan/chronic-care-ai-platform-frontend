@@ -57,13 +57,13 @@ public class SensitiveDataEncryptHandler extends BaseTypeHandler<String> {
      * AES密钥(从配置文件读取)
      * 生产环境必须使用环境变量或配置中心管理
      */
-    @Value("${encryption.aes.key:ChronicCare2024!}")
+    @Value("${encryption.aes.key}")
     private String secretKey;
     
     /**
      * AES初始化向量(从配置文件读取)
      */
-    @Value("${encryption.aes.iv:ChronicCareIV24!}")
+    @Value("${encryption.aes.iv}")
     private String iv;
 
     /**

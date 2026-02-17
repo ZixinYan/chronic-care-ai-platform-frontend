@@ -16,13 +16,13 @@ import java.util.Date;
  * - certificationNumber: 执业证书编号(已加密)
  */
 @Data
-@TableName("doctor")
+@TableName("care_platform_doctor")
 public class Doctor {
     
     /**
      * 医生ID (主键)
      */
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     
     /**

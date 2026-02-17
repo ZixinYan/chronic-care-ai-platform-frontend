@@ -30,7 +30,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-@Service
 @DubboService
 public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> implements AccountManagementAPI {
 

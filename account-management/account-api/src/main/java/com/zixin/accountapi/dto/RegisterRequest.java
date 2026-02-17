@@ -2,11 +2,14 @@ package com.zixin.accountapi.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
 @Data
-public class RegisterRequest {
+public class RegisterRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String username;
     private String password;
     private String nickname;

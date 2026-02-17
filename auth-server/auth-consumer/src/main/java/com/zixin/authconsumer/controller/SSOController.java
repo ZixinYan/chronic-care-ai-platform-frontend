@@ -1,6 +1,7 @@
 package com.zixin.authconsumer.controller;
 
 import com.zixin.accountapi.dto.LoginRequest;
+import com.zixin.accountapi.dto.RegisterRequest;
 import com.zixin.authconsumer.client.AuthClient;
 import com.zixin.authconsumer.service.SSOServiceImpl;
 import com.zixin.thirdpartyapi.dto.SendSMSRequest;
@@ -12,7 +13,12 @@ import dto.ValidateTokenRequest;
 import dto.ValidateTokenResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 
 /**
  * SSO认证控制器
@@ -48,8 +54,8 @@ public class SSOController {
      * @return 注册结果
      */
     @PostMapping("/register")
-    public Result register(@RequestBody LoginRequest registerRequest) {
-        log.info("Register request received for account: {}", registerRequest.getLoginAccount());
+    public Result register(@RequestBody RegisterRequest registerRequest) {
+        log.info("Register request received for account: {}", registerRequest.getUsername());
         return ssoService.register(registerRequest);
     }
 

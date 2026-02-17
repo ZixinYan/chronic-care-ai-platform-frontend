@@ -13,8 +13,7 @@ import java.util.Set;
  * 
  * 当前格式: ROLE:ACTION (如 DOCTOR:READ, PATIENT:WRITE)
  * 建议格式: resource:operation (如 user:read, medical:record:write)
- * 
- * TODO: 未来可以扩展为更细粒度的权限管理
+ *
  */
 public final class PermissionExpandUtil {
 

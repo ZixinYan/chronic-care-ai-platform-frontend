@@ -2,6 +2,8 @@ package com.zixin.accountapi.dto;
 
 import com.zixin.utils.utils.BaseResponse;
 
-public class RegisterResponse extends BaseResponse {
+import java.io.Serializable;
 
+public class RegisterResponse extends BaseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
 }

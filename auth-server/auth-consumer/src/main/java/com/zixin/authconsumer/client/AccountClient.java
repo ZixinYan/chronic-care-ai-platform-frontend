@@ -1,23 +1,23 @@
 package com.zixin.authconsumer.client;
 
+import com.zixin.accountapi.api.AccountManagementAPI;
 import com.zixin.accountapi.dto.LoginRequest;
 import com.zixin.accountapi.dto.LoginResponse;
 import com.zixin.accountapi.dto.RegisterRequest;
 import com.zixin.accountapi.dto.RegisterResponse;
-import com.zixin.accountprovider.service.AccountServiceImpl;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AccountClient {
-    @DubboReference
-    private AccountServiceImpl accountService;
+    @DubboReference(check = false)
+    private AccountManagementAPI accountManagementAPI;
 
     public LoginResponse login(LoginRequest loginRequest) {
-        return accountService.login(loginRequest);
+        return accountManagementAPI.login(loginRequest);
     }
 
     public RegisterResponse register(RegisterRequest registerRequest) {
-        return accountService.register(registerRequest);
+        return accountManagementAPI.register(registerRequest);
     }
 }

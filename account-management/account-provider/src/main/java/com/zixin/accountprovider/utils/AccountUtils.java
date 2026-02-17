@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
-@Service
 public final class AccountUtils  extends ServiceImpl<AccountMapper, Account> {
     /**
      * 校验更新字符是否符合预期

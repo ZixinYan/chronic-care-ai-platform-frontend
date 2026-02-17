@@ -3,6 +3,7 @@ package com.zixin.gateway.config;
 import com.zixin.authapi.api.TokenValidationAPI;
 import dto.ValidateTokenRequest;
 import dto.ValidateTokenResponse;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -15,8 +16,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.cors.reactive.CorsUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.*;
 
@@ -35,32 +38,35 @@ import java.util.*;
 @RequiredArgsConstructor
 public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
 
-    @DubboReference
+    @DubboReference(check = false)
     private TokenValidationAPI tokenValidationAPI;
 
     private static final String TRACE_ID = "X-Trace-Id";
     private static final String USER_ID = "X-User-Id";
     private static final String USERNAME = "X-Username";
-    private static final String USER_TYPE = "X-User-Type";
     private static final String USER_ROLES = "X-User-Roles";
     private static final String USER_AUTHORITIES = "X-User-Authorities";
-    private static final String REAL_NAME = "X-Real-Name";
-    private static final String NICKNAME = "X-Nickname";
-    private static final String PHONE = "X-Phone";
-    private static final String EMAIL = "X-Email";
-    private static final String ATTENDING_DOCTOR_ID = "X-Attending-Doctor-Id";
-    private static final String DEPARTMENT_ID = "X-Department-Id";
     
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+    @PostConstruct
+    public void init() {
+        log.info("========== TraceAndJwtAuthFilter 已加载 ==========");
+        log.info("白名单路径: {}", WHITE_LIST);
+    }
 
     /**
      * 白名单路径 - 这些路径不需要JWT认证
      */
     private static final Set<String> WHITE_LIST = new HashSet<>(Arrays.asList(
-            "/auth/login",
-            "/auth/register",
-            "/auth/refresh",
+            "/auth/**",
+            "/api/auth/**",
             "/actuator/**",
+            "/api/actuator/**",
+            "/v3/api-docs/**",
+            "/api/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/api/swagger-ui/**",
             "/error"
     ));
 
@@ -71,79 +77,60 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
         String traceId = generateOrGetTraceId(exchange);
         String finalTraceId = traceId;
         
+        // 1.1 预检请求直接放行
+        if (CorsUtils.isPreFlightRequest(exchange.getRequest())) {
+            return continueWithTraceId(exchange, chain, finalTraceId);
+        }
+
         // 2. 检查是否是白名单路径
         String path = exchange.getRequest().getPath().value();
         if (isWhiteListPath(path)) {
-            log.debug("White list path: {}, skip JWT authentication", path);
+            log.info("White list path: {}, skip JWT authentication", path);
             return continueWithTraceId(exchange, chain, finalTraceId);
         }
-        
+        log.info("request path: {}, requires JWT authentication", path);
         // 3. 提取JWT Token
         String token = extractToken(exchange);
         if (token == null) {
             log.warn("Missing JWT token for path: {}", path);
-            return unauthorized(exchange, "Missing authentication token");
+            return unauthorized(exchange, finalTraceId, "Missing authentication token");
         }
         
         // 4. 通过Dubbo调用auth-server验证Token
         return validateTokenAsync(token)
                 .flatMap(response -> {
                     // 验证失败
-                    if (response == null || !response.getValid()) {
+                    if (response == null || !Boolean.TRUE.equals(response.getValid())) {
                         log.warn("JWT validation failed for path: {}", path);
-                        return unauthorized(exchange, "Invalid or expired token");
+                        return unauthorized(exchange, finalTraceId, "Invalid or expired token");
                     }
                     
                     // 验证成功，提取用户信息
                     Long userId = response.getUserId();
                     String username = response.getUsername();
-                    Integer userType = response.getUserType();
                     List<String> roles = response.getRoles();
                     List<String> authorities = response.getAuthorities();
-                    String realName = response.getRealName();
-                    String nickname = response.getNickname();
-                    String phone = response.getPhone();
-                    String email = response.getEmail();
-                    Long attendingDoctorId = response.getAttendingDoctorId();
-                    Long departmentId = response.getDepartmentId();
+
+                    if (userId == null) {
+                        log.warn("JWT validation response missing userId, path: {}", path);
+                        return unauthorized(exchange, finalTraceId, "Invalid token payload");
+                    }
                     
-                    log.debug("JWT validated successfully - userId: {}, username: {}, userType: {}, roles: {}", 
-                            userId, username, userType, roles);
+                    log.debug("JWT validated successfully - userId: {}, username: {}, roles: {}", userId, username, roles);
                     
                     // 5. 将用户完整信息注入到下游请求头
                     ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate()
                             .header(TRACE_ID, finalTraceId)
-                            .header(USER_ID, String.valueOf(userId));
+                            .header(USER_ID, userId == null ? "" : String.valueOf(userId));
                     
                     if (username != null) {
                         requestBuilder.header(USERNAME, username);
-                    }
-                    if (userType != null) {
-                        requestBuilder.header(USER_TYPE, String.valueOf(userType));
                     }
                     if (roles != null && !roles.isEmpty()) {
                         requestBuilder.header(USER_ROLES, String.join(",", roles));
                     }
                     if (authorities != null && !authorities.isEmpty()) {
                         requestBuilder.header(USER_AUTHORITIES, String.join(",", authorities));
-                    }
-                    if (realName != null) {
-                        requestBuilder.header(REAL_NAME, realName);
-                    }
-                    if (nickname != null) {
-                        requestBuilder.header(NICKNAME, nickname);
-                    }
-                    if (phone != null) {
-                        requestBuilder.header(PHONE, phone);
-                    }
-                    if (email != null) {
-                        requestBuilder.header(EMAIL, email);
-                    }
-                    if (attendingDoctorId != null) {
-                        requestBuilder.header(ATTENDING_DOCTOR_ID, String.valueOf(attendingDoctorId));
-                    }
-                    if (departmentId != null) {
-                        requestBuilder.header(DEPARTMENT_ID, String.valueOf(departmentId));
                     }
                     
                     ServerHttpRequest modifiedRequest = requestBuilder.build();
@@ -172,7 +159,7 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
                 })
                 .onErrorResume(e -> {
                     log.error("Error during JWT validation", e);
-                    return unauthorized(exchange, "Authentication failed");
+                    return unauthorized(exchange, finalTraceId, "Authentication failed");
                 });
     }
 
@@ -211,19 +198,34 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
      */
     private Mono<ValidateTokenResponse> validateTokenAsync(String token) {
         return Mono.fromCallable(() -> {
-            ValidateTokenRequest request = new ValidateTokenRequest();
-            request.setToken(token);
-            return tokenValidationAPI.validateToken(request);
-        }).onErrorResume(e -> {
-            log.error("Failed to validate token via Dubbo", e);
-            return Mono.empty();
-        });
+                    ValidateTokenRequest request = new ValidateTokenRequest();
+                    request.setToken(token);
+                    ValidateTokenResponse response = tokenValidationAPI.validateToken(request);
+                    if (response == null) {
+                        ValidateTokenResponse fallback = new ValidateTokenResponse();
+                        fallback.setValid(false);
+                        fallback.setMessage("Empty token validation response");
+                        return fallback;
+                    }
+                    return response;
+                })
+                // Dubbo 同步调用会阻塞，必须切到弹性线程池，避免阻塞 Netty 事件循环
+                .subscribeOn(Schedulers.boundedElastic())
+                .onErrorResume(e -> {
+                    log.error("Failed to validate token via Dubbo", e);
+                    ValidateTokenResponse fallback = new ValidateTokenResponse();
+                    fallback.setValid(false);
+                    fallback.setMessage("Dubbo token validation failed");
+                    return Mono.just(fallback);
+                });
+
     }
 
     /**
      * 白名单路径继续执行，只添加TraceId
      */
     private Mono<Void> continueWithTraceId(ServerWebExchange exchange, GatewayFilterChain chain, String traceId) {
+        // 添加模拟用户信息
         ServerHttpRequest modifiedRequest = exchange.getRequest()
                 .mutate()
                 .header(TRACE_ID, traceId)
@@ -246,10 +248,13 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
     /**
      * 返回401未授权响应
      */
-    private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
+    private Mono<Void> unauthorized(ServerWebExchange exchange, String traceId, String message) {
         log.warn("Unauthorized access: {}", message);
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        exchange.getResponse().getHeaders().add("WWW-Authenticate", "Bearer");
+        exchange.getResponse().getHeaders().add("trace-context","unauthorized");
+        if (traceId != null && !traceId.isEmpty()) {
+            exchange.getResponse().getHeaders().add(TRACE_ID, traceId);
+        }
         return exchange.getResponse().setComplete();
     }
 

@@ -21,7 +21,7 @@ import java.util.Date;
 @Data
 @TableName("`care_platform_user`")
 public class Account {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long accountId;
     
     private String username;

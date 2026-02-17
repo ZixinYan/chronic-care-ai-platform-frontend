@@ -2,6 +2,8 @@ package com.zixin.authconsumer.service;
 
 import com.zixin.accountapi.dto.LoginRequest;
 import com.zixin.accountapi.dto.LoginResponse;
+import com.zixin.accountapi.dto.RegisterRequest;
+import com.zixin.accountapi.dto.RegisterResponse;
 import com.zixin.authapi.api.LoginWithPhoneAPI;
 import com.zixin.authconsumer.client.AccountClient;
 import com.zixin.authconsumer.client.AuthClient;
@@ -132,11 +134,15 @@ public class SSOServiceImpl implements LoginWithPhoneAPI {
                 .collect(Collectors.toList());
     }
 
-
-
     @Override
-    public Result register(LoginRequest loginRequest) {
-        return null;
+    public Result register(RegisterRequest registerRequest) {
+        // 1. 调用account服务进行注册
+        RegisterResponse response = accountClient.register(registerRequest);
+        if (response.getCode() != ToBCodeEnum.SUCCESS) {
+            log.error("Account registration failed: {}", response.getMessage());
+            return Result.error(response.getMessage());
+        }
+        return Result.success().setData(response);
     }
 
     @Override

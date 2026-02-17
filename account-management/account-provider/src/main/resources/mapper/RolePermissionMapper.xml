@@ -6,7 +6,7 @@
 <mapper namespace="com.zixin.account.mapper.RolePermissionMapper">
 
     <select id="selectByRoleCodes"
-            resultType="com.zixin.account.domain.RolePermission">
+            resultType="com.zixin.accountapi.po.RolePermission">
 
         select
         id,
