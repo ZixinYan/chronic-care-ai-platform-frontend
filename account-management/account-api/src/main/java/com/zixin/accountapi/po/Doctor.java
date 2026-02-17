@@ -11,6 +11,9 @@ import java.util.Date;
  * 
  * 扩展Account的用户信息，存储医生专属字段
  * 所有身份相关的信息都在account-management中管理
+ * 
+ * 敏感字段加密说明:
+ * - certificationNumber: 执业证书编号(已加密)
  */
 @Data
 @TableName("doctor")
@@ -43,8 +46,9 @@ public class Doctor {
     private Integer experience;
     
     /**
-     * 执业证书编号
+     * 执业证书编号(加密存储)
      */
+    @TableField(typeHandler = com.zixin.utils.security.SensitiveDataEncryptHandler.class)
     private String certificationNumber;
     
     /**

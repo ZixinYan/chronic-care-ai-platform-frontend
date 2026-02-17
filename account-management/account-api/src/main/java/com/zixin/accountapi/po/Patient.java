@@ -11,6 +11,9 @@ import java.util.Date;
  * 
  * 扩展Account的用户信息，存储患者专属字段
  * 所有身份相关的信息都在account-management中管理
+ * 
+ * 敏感字段加密说明:
+ * - emergencyPhone: 紧急联系人电话(已加密)
  */
 @Data
 @TableName("patient")
@@ -64,8 +67,9 @@ public class Patient {
     private String emergencyContact;
     
     /**
-     * 紧急联系人电话
+     * 紧急联系人电话(加密存储)
      */
+    @TableField(typeHandler = com.zixin.utils.security.SensitiveDataEncryptHandler.class)
     private String emergencyPhone;
     
     /**

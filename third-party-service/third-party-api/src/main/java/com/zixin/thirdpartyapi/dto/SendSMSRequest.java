@@ -6,4 +6,5 @@ import lombok.Data;
 public class SendSMSRequest {
     private String phone;
     private String code;
+    private String templateId;
 }

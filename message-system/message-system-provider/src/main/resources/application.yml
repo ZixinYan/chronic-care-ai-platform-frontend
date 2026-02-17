@@ -22,6 +22,26 @@ spring:
         max-idle: 8
         min-idle: 0
         max-wait: -1ms
+    # Redis连接超时时间
+    timeout: 3000ms
+
+# 短信防刷配置
+sms:
+  rate-limit:
+    # 是否启用防刷功能
+    enabled: true
+    # 短期限流配置（防止频繁发送）
+    phone-short:
+      limit: 1        # 60秒内同一手机号最多发送次数
+      window: 60      # 时间窗口（秒）
+    sender-short:
+      limit: 5        # 60秒内同一发送者最多发送次数
+      window: 60      # 时间窗口（秒）
+    # 长期限流配置（防止恶意刷短信）
+    phone-daily:
+      limit: 10       # 24小时内同一手机号最多发送次数
+      window: 86400   # 时间窗口（秒，24小时）
+
 
 # MyBatis-Plus配置
 mybatis-plus:

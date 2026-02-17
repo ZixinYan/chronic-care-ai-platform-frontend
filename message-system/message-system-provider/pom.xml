@@ -30,6 +30,20 @@
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         
+        <!-- account-api (用于Dubbo调用账户管理服务) -->
+        <dependency>
+            <groupId>com.zixin</groupId>
+            <artifactId>account-api</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        
+        <!-- third-party-api (用于Dubbo调用第三方服务) -->
+        <dependency>
+            <groupId>com.zixin</groupId>
+            <artifactId>third-party-api</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -108,6 +122,12 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+        
+        <!-- Spring Data Redis (用于防刷限流) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         
         <!-- Spring Boot Test -->

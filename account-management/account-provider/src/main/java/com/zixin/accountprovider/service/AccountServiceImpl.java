@@ -61,11 +61,14 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
         Account account;
         try {
-            // 2. 根据用户名/手机号/身份证查找账号
+            // 2. 根据用户名/手机号哈希/身份证号哈希查找账号
+            // 生成哈希值用于查询（手机号和身份证号已加密，需要通过哈希值查询）
+            String accountHash = org.apache.commons.codec.digest.DigestUtils.sha256Hex(loginAccount);
+            
             account = this.baseMapper.selectOne(new QueryWrapper<Account>()
-                    .eq("username", loginAccount)
-                    .or().eq("phone", loginAccount)
-                    .or().eq("id_card", loginAccount));
+                    .eq("username", loginAccount)           // 用户名查询
+                    .or().eq("phone_hash", accountHash)     // 手机号哈希查询
+                    .or().eq("id_card_hash", accountHash)); // 身份证号哈希查询
         } catch (Exception e) {
             log.error("Fail to query account by loginAccount:{}, error:{}", loginAccount, e.getMessage());
             loginResponse.setCode(ToBCodeEnum.FAIL);
@@ -146,6 +149,16 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         account.setGender(registerRequest.getGender());
         account.setIdCard(registerRequest.getIdCard());
         
+        // 生成手机号哈希值（用于登录查询）
+        if (registerRequest.getPhone() != null && !registerRequest.getPhone().trim().isEmpty()) {
+            account.setPhoneHash(org.apache.commons.codec.digest.DigestUtils.sha256Hex(registerRequest.getPhone()));
+        }
+        
+        // 生成身份证号哈希值（用于登录查询）
+        if (registerRequest.getIdCard() != null && !registerRequest.getIdCard().trim().isEmpty()) {
+            account.setIdCardHash(org.apache.commons.codec.digest.DigestUtils.sha256Hex(registerRequest.getIdCard()));
+        }
+        
         // 加密密码
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         String encodedPassword = passwordEncoder.encode(registerRequest.getPassword());
@@ -181,7 +194,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
             try {
                 for (Integer roleCode : roleCodes) {
                     AccountRole accountRole = new AccountRole();
-                    accountRole.setAccountId(account.getAccountId());
+                    accountRole.setUserId(account.getAccountId());
                     accountRole.setRoleCode(roleCode);
                     accountRole.setCreateTime(new Date());
                     accountRoleMapper.insert(accountRole);
@@ -250,11 +263,24 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
             updateUserInfoResponse.setMessage("account is null");
             return updateUserInfoResponse;
         }
+        
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("account_id", accountId);
         updateUserInfoRequest.getUpdateData().forEach((key,value) -> {
             if(value != null) {
                 updateWrapper.set(key, value);
+                
+                // 如果更新的是手机号，同时更新手机号哈希
+                if("phone".equals(key)) {
+                    String phoneHash = org.apache.commons.codec.digest.DigestUtils.sha256Hex(value.toString());
+                    updateWrapper.set("phone_hash", phoneHash);
+                }
+                
+                // 如果更新的是身份证号，同时更新身份证号哈希
+                if("id_card".equals(key)) {
+                    String idCardHash = org.apache.commons.codec.digest.DigestUtils.sha256Hex(value.toString());
+                    updateWrapper.set("id_card_hash", idCardHash);
+                }
             }
         });
         updateWrapper.set("update_time", new Date());
@@ -352,7 +378,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
             // 插入新的角色
             for (Integer roleCode : newRoleCodes) {
                 AccountRole accountRole = new AccountRole();
-                accountRole.setAccountId(accountId);
+                accountRole.setUserId(accountId);
                 accountRole.setRoleCode(roleCode);
                 accountRole.setCreateTime(new Date());
                 accountRoleMapper.insert(accountRole);

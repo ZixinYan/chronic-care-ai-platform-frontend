@@ -13,3 +13,16 @@ account:
     #   3 - PATIENT (患者)
     default-roles:
       - 3  # 默认为患者角色
+
+# 敏感数据加密配置
+encryption:
+  aes:
+    # AES加密密钥 (16字节)
+    # 生产环境必须使用环境变量或配置中心管理，严禁硬编码
+    # 建议使用: export ENCRYPTION_AES_KEY=your-secret-key
+    key: ${ENCRYPTION_AES_KEY:ChronicCare2024!}
+    
+    # AES初始化向量 (16字节)
+    # 生产环境必须使用环境变量或配置中心管理，严禁硬编码
+    # 建议使用: export ENCRYPTION_AES_IV=your-iv-value
+    iv: ${ENCRYPTION_AES_IV:ChronicCareIV24!}

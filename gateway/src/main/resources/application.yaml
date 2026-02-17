@@ -62,43 +62,56 @@ spring:
       routes:
         # 认证服务路由
         - id: auth-service
-          uri: lb://auth-provider
+          uri: lb://auth-consumer
           predicates:
-            - Path=/auth/**
+            - Path=/api/auth/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
 
-        # 账户服务路由
+        # 账户服务路由（需要通过auth-consumer）
         - id: account-service
-          uri: lb://account-service
+          uri: lb://auth-consumer
           predicates:
-            - Path=/account/**
+            - Path=/api/account/**
           filters:
             - StripPrefix=1
 
-        # 订单服务路由
-        - id: order-service
-          uri: lb://order-service
+        # 健康报告服务路由
+        - id: health-center-service
+          uri: lb://health-center-consumer
           predicates:
-            - Path=/order/**
+            - Path=/api/health/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
+
+        # 医生服务路由
+        - id: doctor-service
+          uri: lb://doctor-service-consumer
+          predicates:
+            - Path=/api/doctor/**
+          filters:
+            - StripPrefix=2
+
+        # 消息系统路由
+        - id: message-service
+          uri: lb://message-system-consumer
+          predicates:
+            - Path=/api/message/**
+          filters:
+            - StripPrefix=2
 
 # Dubbo配置
 dubbo:
   application:
     name: api-gateway
   registry:
-    address: nacos://192.168.35.128:8848
-    parameters:
-      namespace: 48126882-0e93-4746-b265-ab232bf8d85e
-      group: DEV_GROUP
+    address: nacos://localhost:8848
   protocol:
     name: dubbo
     port: -1
   consumer:
     check: false
-    timeout: 3000
+    timeout: 30000
 
 # 日志配置
 logging:

@@ -44,7 +44,11 @@ public class SMSServiceImpl implements SMSAPI {
         Map<String, String> querys = new HashMap<String, String>();
         Map<String, String> bodys = new HashMap<String, String>();
         bodys.put("content", "code:"+ sendSMSRequest.getCode());
-        bodys.put("templateid", tpl_id);
+        if (sendSMSRequest.getTemplateId() == null) {
+            bodys.put("templateid", tpl_id);
+        } else {
+            bodys.put("templateid", sendSMSRequest.getTemplateId());
+        }
         bodys.put("mobile", sendSMSRequest.getPhone());
 
 

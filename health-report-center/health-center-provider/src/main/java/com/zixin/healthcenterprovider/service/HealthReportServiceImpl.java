@@ -4,6 +4,8 @@ import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zixin.accountapi.api.UserIdentityAPI;
+import com.zixin.accountapi.dto.GetDoctorInfoRequest;
+import com.zixin.accountapi.dto.GetDoctorInfoResponse;
 import com.zixin.accountapi.dto.GetPatientInfoRequest;
 import com.zixin.accountapi.dto.GetPatientInfoResponse;
 import com.zixin.accountapi.vo.PatientVO;
@@ -341,9 +343,37 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             vo.setStatusDesc(status.getDescription());
         }
         
-        // TODO: 查询患者和医生姓名
-        // 可以通过Dubbo调用UserIdentityAPI获取患者信息
-        // 可以通过Dubbo调用DoctorAPI获取医生信息
+        // 查询患者姓名
+        if (report.getPatientId() != null) {
+            try {
+                GetPatientInfoRequest patientRequest = new GetPatientInfoRequest();
+                patientRequest.setPatientId(report.getPatientId());
+                GetPatientInfoResponse patientResponse = userIdentityAPI.getPatientInfo(patientRequest);
+                
+                if (ToBCodeEnum.SUCCESS.equals(patientResponse.getCode()) 
+                        && patientResponse.getPatient() != null) {
+                    vo.setPatientName(patientResponse.getPatient().getNickname());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get patient name, patientId: {}", report.getPatientId(), e);
+            }
+        }
+        
+        // 查询医生姓名
+        if (report.getAttendingDoctorId() != null) {
+            try {
+                GetDoctorInfoRequest doctorRequest = new GetDoctorInfoRequest();
+                doctorRequest.setDoctorId(report.getAttendingDoctorId());
+                GetDoctorInfoResponse doctorResponse = userIdentityAPI.getDoctorInfo(doctorRequest);
+                
+                if (ToBCodeEnum.SUCCESS.equals(doctorResponse.getCode()) 
+                        && doctorResponse.getDoctor() != null) {
+                    vo.setDoctorName(doctorResponse.getDoctor().getNickname());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get doctor name, doctorId: {}", report.getAttendingDoctorId(), e);
+            }
+        }
         
         return vo;
     }
