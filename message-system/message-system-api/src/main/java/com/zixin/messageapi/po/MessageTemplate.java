@@ -29,7 +29,7 @@ public class MessageTemplate {
     /**
      * 模板ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long templateId;
     
     /**
@@ -86,11 +86,11 @@ public class MessageTemplate {
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
-    private Date createTime;
+    private Long createTime;
     
     /**
      * 更新时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    private Date updateTime;
+    private Long updateTime;
 }

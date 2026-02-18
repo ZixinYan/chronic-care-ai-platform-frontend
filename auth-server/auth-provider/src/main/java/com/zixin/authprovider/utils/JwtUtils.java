@@ -56,7 +56,7 @@ public class JwtUtils {
      * @param permissions 权限集合(直接传入,不再从数据库查询)
      * @return Access Token
      */
-    public String generateAccessToken(Long userId, String username, List<String> roles, Set<String> permissions) {
+    public String generateAccessToken(Long userId, String username, List<String> roles, Set<String> permissions, String tokenId) {
         // 1. 构造 claims
         Instant now = Instant.now();
         Instant expiresAt = now.plus(accessTokenExpiration, ChronoUnit.SECONDS);
@@ -64,6 +64,7 @@ public class JwtUtils {
         JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .subject(userId.toString())
                 .issuedAt(now)
+                .id(tokenId)
                 .expiresAt(expiresAt)
                 .claim("type", "access");
 
@@ -101,9 +102,7 @@ public class JwtUtils {
      * @param roles 角色列表(用于刷新时重新生成Access Token)
      * @return Refresh Token
      */
-    public String generateRefreshToken(Long userId, List<String> roles) {
-        // 生成唯一的token ID
-        String tokenId = UUID.randomUUID().toString();
+    public String generateRefreshToken(Long userId, List<String> roles, String tokenId) {
 
         Instant now = Instant.now();
         Instant expiresAt = now.plus(refreshTokenExpiration, ChronoUnit.SECONDS);
@@ -143,8 +142,9 @@ public class JwtUtils {
      * @return Map包含accessToken和refreshToken
      */
     public Map<String, String> generateTokenPair(Long userId, String username, List<String> roles, Set<String> permissions) {
-        String accessToken = generateAccessToken(userId, username, roles, permissions);
-        String refreshToken = generateRefreshToken(userId, roles);
+        String tokenId = UUID.randomUUID().toString(); // 生成唯一的token ID
+        String accessToken = generateAccessToken(userId, username, roles, permissions, tokenId);
+        String refreshToken = generateRefreshToken(userId, roles, tokenId);
 
         Map<String, String> tokens = new HashMap<>();
         tokens.put("accessToken", accessToken);

@@ -4,13 +4,16 @@ import com.zixin.utils.utils.BaseResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
+
 /**
  * 刷新Token响应DTO
  * 返回新的Access Token和Refresh Token
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class RefreshTokenResponse extends BaseResponse {
+public class RefreshTokenResponse extends BaseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 新的访问令牌(Access Token)
      */

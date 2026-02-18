@@ -2,9 +2,8 @@ package com.zixin.accountapi.po;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.annotation.*;
+import com.zixin.utils.security.SensitiveDataEncryptHandler;
 import lombok.Data;
-
-import java.util.Date;
 
 /**
  * 用户账户表
@@ -20,9 +19,9 @@ import java.util.Date;
  */
 @Data
 @TableName("`care_platform_user`")
-public class Account {
-    @TableId(type = IdType.AUTO)
-    private Long accountId;
+public class User {
+    @TableId(type = IdType.ASSIGN_ID)
+    private Long userId;
     
     private String username;
     
@@ -35,7 +34,7 @@ public class Account {
     /**
      * 手机号(加密存储)
      */
-    @TableField(typeHandler = com.zixin.utils.security.SensitiveDataEncryptHandler.class)
+    @TableField(typeHandler = SensitiveDataEncryptHandler.class)
     private String phone;
     
     /**
@@ -47,19 +46,19 @@ public class Account {
     /**
      * 邮箱(加密存储)
      */
-    @TableField(typeHandler = com.zixin.utils.security.SensitiveDataEncryptHandler.class)
+    @TableField(typeHandler = SensitiveDataEncryptHandler.class)
     private String email;
     
     private String avatarUrl;
     
     private String address;
     
-    private Date birthday;
+    private Long birthday;
     
     /**
      * 身份证号(加密存储)
      */
-    @TableField(typeHandler = com.zixin.utils.security.SensitiveDataEncryptHandler.class)
+    @TableField(typeHandler = SensitiveDataEncryptHandler.class)
     private String idCard;
     
     /**
@@ -67,10 +66,10 @@ public class Account {
      * 注意: 此字段由Service层自动生成，不需要手动设置
      */
     private String idCardHash;
-    
-    private Date createTime;
-    
-    private Date updateTime;
+    @TableField(fill = FieldFill.INSERT)
+    private Long createTime;
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateTime;
     
     @TableLogic
     private Integer dele;

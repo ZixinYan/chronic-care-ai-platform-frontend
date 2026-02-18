@@ -16,7 +16,7 @@
         "schedule_category数据库表映射接口"
       ]
     },
-    "detailed_description": "ScheduleCategory是医生服务API模块中的持久化对象(PO),代表数据库中的schedule_category表。该组件用于定义医疗系统中各种日程的分类信息,是医生排班/日程管理功能的基础数据模型。\n\n核心功能设计:\n1. 主键ID采用数据库自增策略(IdType.AUTO),适用于单机或主从复制场景\n2. categoryName存储类别全称,categoryAlias存储简称/别名,支持灵活的显示需求\n3. ext字段采用JSON类型,提供高度可扩展性,可存储颜色标识、图标、AI推荐配置等动态属性\n\n技术实现特点:\n- 使用Lombok @Data注解自动生成getter/setter/toString/equals/hashCode方法\n- 采用MyBatis-Plus注解(@TableName、@TableId)实现ORM映射\n- 使用fastjson2的JSON类型作为扩展字段类型,支持灵活的JSON数据存储\n\n在医疗系统业务场景中,该组件用于:\n- 为医生日程/排班提供分类基础数据\n- 支持日程的可视化区分(通过ext中的颜色、图标)\n- 为智能日程推荐提供类别维度的配置信息",
+    "detailed_description": "ScheduleCategory是医生服务API模块中的持久化对象(PO),代表数据库中的schedule_category表。该组件用于定义医疗系统中各种日程的分类信息,是医生排班/日程管理功能的基础数据模型。\n\n核心功能设计:\n1. 主键ID采用数据库自增策略(IdType.ASSIGN_ID),适用于单机或主从复制场景\n2. categoryName存储类别全称,categoryAlias存储简称/别名,支持灵活的显示需求\n3. ext字段采用JSON类型,提供高度可扩展性,可存储颜色标识、图标、AI推荐配置等动态属性\n\n技术实现特点:\n- 使用Lombok @Data注解自动生成getter/setter/toString/equals/hashCode方法\n- 采用MyBatis-Plus注解(@TableName、@TableId)实现ORM映射\n- 使用fastjson2的JSON类型作为扩展字段类型,支持灵活的JSON数据存储\n\n在医疗系统业务场景中,该组件用于:\n- 为医生日程/排班提供分类基础数据\n- 支持日程的可视化区分(通过ext中的颜色、图标)\n- 为智能日程推荐提供类别维度的配置信息",
     "responsibilities": [
       "定义日程类别的数据库实体结构,包含主键ID、类别名称、别名和描述",
       "提供MyBatis-Plus ORM框架的表映射配置,实现与schedule_category表的自动映射",

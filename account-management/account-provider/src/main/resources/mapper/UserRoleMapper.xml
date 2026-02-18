@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zixin.accountprovider.mapper.UserRoleMapper">
+
+    <select id="selectRoleCodesByUserId" resultType="java.lang.Integer">
+        SELECT role_code FROM care_platform_user_role WHERE user_id = #{userId}
+    </select>
+
+    <delete id="deleteByUserId">
+        DELETE FROM care_platform_user_role WHERE user_id = #{userId}
+    </delete>
+
+    <insert id="batchInsert">
+        INSERT INTO care_platform_user_role (user_id, role_code, create_time) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.userId}, #{item.roleCode}, #{item.createTime})
+        </foreach>
+    </insert>
+
+</mapper>

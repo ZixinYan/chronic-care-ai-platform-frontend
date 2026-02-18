@@ -41,16 +41,6 @@ public class AuthConsumerApplication implements CommandLineRunner {
             System.out.println("Bean name: " + entry.getKey() +
                     " -> Class: " + entry.getValue().getClass().getSimpleName());
         }
-
-        // 检查 SSOController 是否存在
-        boolean found = controllers.values().stream()
-                .anyMatch(bean -> bean.getClass().getSimpleName().equals("SSOController"));
-
-        if (found) {
-            System.out.println("✅ SSOController 已加载");
-        } else {
-            System.out.println("❌ SSOController 未加载");
-        }
         System.out.println("==========================================\n");
     }
 

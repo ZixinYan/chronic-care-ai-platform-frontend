@@ -17,7 +17,7 @@ public class RegisterRequest implements Serializable {
     private String address;
     private Integer gender;
     private String idCard;
-    private Date birthday;
+    private Long birthday;
     
     /**
      * 用户角色列表 (可选)

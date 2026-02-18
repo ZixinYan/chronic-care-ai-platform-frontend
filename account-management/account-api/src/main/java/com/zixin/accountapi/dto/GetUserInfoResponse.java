@@ -5,12 +5,14 @@ import com.zixin.utils.utils.BaseResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class GetUserInfoResponse extends BaseResponse {
+public class GetUserInfoResponse extends BaseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
    private List<UserInfoDTO> users;
 
 
@@ -23,9 +25,9 @@ public class GetUserInfoResponse extends BaseResponse {
        private String email;
        private String avatarUrl;
        private String address;
-       private Date birthday;
-       private Date createTime;
-       private Date updateTime;
+       private Long birthday;
+       private Long createTime;
+       private Long updateTime;
        private JSON ext;
 
 

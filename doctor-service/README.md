@@ -314,11 +314,11 @@ private AccountAPI accountAPI;
 
 public DoctorVO getDoctorInfo(Long doctorId) {
     Doctor doctor = doctorMapper.selectById(doctorId);
-    Account account = accountAPI.getAccount(doctor.getUserId());
+    Account user = accountAPI.getAccount(doctor.getUserId());
     
     // 合并信息
-    vo.setName(account.getName());
-    vo.setPhone(account.getPhone());
+    vo.setName(user.getName());
+    vo.setPhone(user.getPhone());
     ...
 }
 ```

@@ -4,6 +4,7 @@ import com.zixin.utils.utils.BaseResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -11,7 +12,8 @@ import java.util.List;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class ValidateTokenResponse extends BaseResponse {
+public class ValidateTokenResponse extends BaseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 用户ID
      */

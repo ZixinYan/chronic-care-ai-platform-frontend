@@ -1,8 +1,6 @@
 package com.zixin.accountapi.po;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.zixin.accountapi.enums.Action;
 import com.zixin.accountapi.enums.RoleCode;
 import lombok.Data;
@@ -13,7 +11,7 @@ import java.util.Date;
  * 角色-权限关联表
  * 
  * 当前设计:
- * - roleCode: 角色代码(对应RoleCode枚举: 1-DOCTOR, 2-PATIENT, 3-FAMILY)
+ * - roleCode: 角色代码(对应RoleCode枚举: 1-DOCTOR, 2-PATIENT, 3-FAMILY 4-ADMIN)
  * - actionCode: 权限代码(对应Action枚举: 1-READ, 2-WRITE, 3-ALL)
  * 
  * 权限工作流程:
@@ -36,7 +34,7 @@ public class RolePermission {
     /**
      * 主键ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /**
@@ -61,7 +59,8 @@ public class RolePermission {
     /**
      * 创建时间
      */
-    private Date createTime;
+    @TableField(fill = FieldFill.INSERT)
+    private Long createTime;
     
     // ==================== 工具方法 ====================
     

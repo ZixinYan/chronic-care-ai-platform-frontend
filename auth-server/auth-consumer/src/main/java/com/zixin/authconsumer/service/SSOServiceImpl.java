@@ -67,8 +67,6 @@ public class SSOServiceImpl implements LoginWithPhoneAPI {
             }
 
             // 3. 将角色code转换为角色名称
-            // 注意: 这里需要根据实际业务逻辑进行转换
-            // 如果roleCodes是Integer类型，需要转换为String类型的角色名
             List<String> roleNames = convertRoleCodesToNames(roleCodes);
 
             // 4. 生成双Token (Access Token + Refresh Token)
@@ -95,12 +93,10 @@ public class SSOServiceImpl implements LoginWithPhoneAPI {
             data.put("username", username);
             data.put("accessToken", tokenResponse.getAccessToken());
             data.put("refreshToken", tokenResponse.getRefreshToken());
-            data.put("expiresIn", tokenResponse.getExpiresIn());
             data.put("tokenType", tokenResponse.getTokenType());
-            data.put("roles", roleNames);
-            data.put("permissions", permissions);
 
-            log.info("User logged in successfully - userId: {}, username: {}", userId, username);
+
+            log.info("User logged in successfully - userId: {}, username: {}, role name:{}, permission:{}", userId, username, roleNames, permissions);
             return Result.success(data);
 
         } catch (Exception e) {

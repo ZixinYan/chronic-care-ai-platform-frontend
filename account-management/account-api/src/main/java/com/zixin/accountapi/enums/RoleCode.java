@@ -11,7 +11,8 @@ public enum RoleCode {
 
     DOCTOR(1, "医生"),
     PATIENT(2, "患者"),
-    FAMILY(3, "家属");
+    FAMILY(3, "家属"),
+    ADMIN(4, "管理员");
 
     private static final Map<Integer, RoleCode> CODE_MAP =
             Arrays.stream(values())

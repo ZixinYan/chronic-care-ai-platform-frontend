@@ -7,14 +7,13 @@ import com.zixin.accountapi.dto.GetUserPermissionResponse;
 import com.zixin.accountapi.dto.HasPermissionRequest;
 import com.zixin.accountapi.dto.HasPermissionResponse;
 import com.zixin.accountapi.po.RolePermission;
-import com.zixin.accountprovider.mapper.AccountRoleMapper;
+import com.zixin.accountprovider.mapper.UserRoleMapper;
 import com.zixin.accountprovider.mapper.RolePermissionMapper;
 import com.zixin.accountprovider.utils.PermissionExpandUtil;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,11 +22,11 @@ import java.util.Set;
 @Slf4j
 public class PermissionServiceImpl implements PermissionServiceAPI {
 
-    private final AccountRoleMapper accountRoleMapper;
+    private final UserRoleMapper userRoleMapper;
     private final RolePermissionMapper rolePermissionMapper;
 
-    public PermissionServiceImpl(AccountRoleMapper accountRoleMapper, RolePermissionMapper rolePermissionMapper) {
-        this.accountRoleMapper = accountRoleMapper;
+    public PermissionServiceImpl(UserRoleMapper userRoleMapper, RolePermissionMapper rolePermissionMapper) {
+        this.userRoleMapper = userRoleMapper;
         this.rolePermissionMapper = rolePermissionMapper;
     }
 
@@ -39,7 +38,7 @@ public class PermissionServiceImpl implements PermissionServiceAPI {
         try {
             // 1. 查询角色
             List<Integer> roleCodes =
-                    accountRoleMapper.selectRoleCodesByUserId(userId);
+                    userRoleMapper.selectRoleCodesByUserId(userId);
 
             if (CollectionUtils.isEmpty(roleCodes)) {
                 response.setCode(ToBCodeEnum.FAIL);

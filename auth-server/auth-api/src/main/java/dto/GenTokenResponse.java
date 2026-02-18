@@ -5,13 +5,16 @@ import com.zixin.utils.utils.BaseResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
+
 /**
  * 生成Token响应DTO
  * 包含Access Token和Refresh Token
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class GenTokenResponse extends BaseResponse {
+public class GenTokenResponse extends BaseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 访问令牌(Access Token)
      * 用于API访问，短期有效(默认30分钟)

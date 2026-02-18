@@ -1,17 +1,16 @@
 package com.zixin.accountprovider.utils;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.zixin.accountapi.po.Account;
+import com.zixin.accountapi.po.User;
 import com.zixin.accountprovider.consts.Enum;
-import com.zixin.accountprovider.mapper.AccountMapper;
+import com.zixin.accountprovider.mapper.UserMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
-public final class AccountUtils  extends ServiceImpl<AccountMapper, Account> {
+public final class AccountUtils  extends ServiceImpl<UserMapper, User> {
     /**
      * 校验更新字符是否符合预期
      */

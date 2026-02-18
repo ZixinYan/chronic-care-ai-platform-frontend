@@ -22,7 +22,7 @@ public class Patient {
     /**
      * 患者ID (主键)
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     
     /**
@@ -75,12 +75,14 @@ public class Patient {
     /**
      * 创建时间
      */
-    private Date createTime;
+    @TableField(fill = FieldFill.INSERT)
+    private Long createTime;
     
     /**
      * 更新时间
      */
-    private Date updateTime;
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateTime;
     
     /**
      * 逻辑删除标记 (0-未删除, 1-已删除)

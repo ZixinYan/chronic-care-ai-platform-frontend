@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 用户-角色关联表 (AccountRole)
+ * 用户-角色关联表
  * 
  * 用于实现用户和角色的多对多关系:
  * - 一个用户可以拥有多个角色 (例如: 既是医生又是管理员)
@@ -21,16 +21,16 @@ import java.util.Date;
  */
 @Data
 @TableName("care_platform_user_role")
-public class AccountRole {
+public class UserRole {
     
     /**
      * 主键
      */
     @TableId(type = IdType.ASSIGN_ID)
-    private Long accountRoleId;
+    private Long userRoleId;
     
     /**
-     * 用户ID - 关联Account表
+     * 用户ID
      */
     private Long userId;
     
@@ -47,7 +47,8 @@ public class AccountRole {
     /**
      * 授权时间
      */
-    private Date createTime;
+    @TableField(fill = FieldFill.INSERT)
+    private Long createTime;
     
     // ==================== 工具方法 ====================
     

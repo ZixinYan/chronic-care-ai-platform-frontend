@@ -3,12 +3,12 @@ package com.zixin.accountprovider.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zixin.accountapi.api.UserIdentityAPI;
 import com.zixin.accountapi.dto.*;
-import com.zixin.accountapi.po.Account;
+import com.zixin.accountapi.po.User;
 import com.zixin.accountapi.po.Doctor;
 import com.zixin.accountapi.po.Patient;
 import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountapi.vo.PatientVO;
-import com.zixin.accountprovider.mapper.AccountMapper;
+import com.zixin.accountprovider.mapper.UserMapper;
 import com.zixin.accountprovider.mapper.DoctorMapper;
 import com.zixin.accountprovider.mapper.PatientMapper;
 import com.zixin.utils.exception.ToBCodeEnum;
@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 public class UserIdentityServiceImpl implements UserIdentityAPI {
     
     @Autowired
-    private AccountMapper accountMapper;
+    private UserMapper userMapper;
     
     @Autowired
     private DoctorMapper doctorMapper;
@@ -60,8 +60,8 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             }
             
             // 查询账户信息
-            Account account = accountMapper.selectById(doctor.getAccountId());
-            if (account == null) {
+            User user = userMapper.selectById(doctor.getAccountId());
+            if (user == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("关联账户不存在");
                 return response;
@@ -70,8 +70,8 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             // 组装VO
             DoctorVO vo = new DoctorVO();
             BeanUtils.copyProperties(doctor, vo);
-            BeanUtils.copyProperties(account, vo);
-            vo.setUsername(account.getUsername());
+            BeanUtils.copyProperties(user, vo);
+            vo.setUsername(user.getUsername());
             
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("查询成功");
@@ -117,8 +117,8 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             }
             
             // 查询账户信息
-            Account account = accountMapper.selectById(patient.getAccountId());
-            if (account == null) {
+            User user = userMapper.selectById(patient.getAccountId());
+            if (user == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("关联账户不存在");
                 return response;
@@ -127,8 +127,8 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             // 组装VO
             PatientVO vo = new PatientVO();
             BeanUtils.copyProperties(patient, vo);
-            BeanUtils.copyProperties(account, vo);
-            vo.setUsername(account.getUsername());
+            BeanUtils.copyProperties(user, vo);
+            vo.setUsername(user.getUsername());
             
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("查询成功");

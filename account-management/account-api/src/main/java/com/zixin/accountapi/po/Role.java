@@ -10,7 +10,7 @@ import java.util.Date;
  * 角色实体类
  * 
  * 角色设计说明:
- * 1. code字段: 存储RoleCode枚举的code值(1-DOCTOR, 2-PATIENT, 3-FAMILY)
+ * 1. code字段: 存储RoleCode枚举的code值(1-DOCTOR, 2-PATIENT, 3-FAMILY 4-ADMIN)
  * 2. 用于数据库存储和业务逻辑
  * 3. 在生成JWT Token时，需要将code转换为枚举名称(如"DOCTOR")
  * 4. @RequireRole注解使用枚举名称进行匹配
@@ -27,7 +27,7 @@ public class Role {
     /**
      * 角色ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long roleId;
 
     /**
@@ -78,12 +78,14 @@ public class Role {
     /**
      * 创建时间
      */
-    private Date createTime;
+    @TableField(fill = FieldFill.INSERT)
+    private Long createTime;
     
     /**
      * 更新时间
      */
-    private Date updateTime;
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateTime;
     
     // ==================== 工具方法 ====================
     

@@ -73,20 +73,20 @@ public class MessageVO {
     /**
      * 阅读时间
      */
-    private Date readTime;
+    private Long readTime;
     
     /**
      * 撤回时间
      */
-    private Date revokeTime;
+    private Long revokeTime;
     
     /**
      * 创建时间
      */
-    private Date createTime;
+    private Long createTime;
     
     /**
      * 更新时间
      */
-    private Date updateTime;
+    private Long updateTime;
 }

@@ -75,7 +75,7 @@ public class HealthReportVO {
     /**
      * 报告日期
      */
-    private Date reportDate;
+    private Long reportDate;
     
     /**
      * 上传者ID
@@ -110,10 +110,10 @@ public class HealthReportVO {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private Long createTime;
     
     /**
      * 更新时间
      */
-    private Date updateTime;
+    private Long updateTime;
 }

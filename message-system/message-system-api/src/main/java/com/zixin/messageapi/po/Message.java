@@ -84,24 +84,24 @@ public class Message {
     /**
      * 阅读时间
      */
-    private Date readTime;
+    private Long readTime;
     
     /**
      * 撤回时间
      */
-    private Date revokeTime;
+    private Long revokeTime;
     
     /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
-    private Date createTime;
+    private Long createTime;
     
     /**
      * 更新时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    private Date updateTime;
+    private Long updateTime;
     
     /**
      * 删除标记 (0-未删除, 1-已删除)

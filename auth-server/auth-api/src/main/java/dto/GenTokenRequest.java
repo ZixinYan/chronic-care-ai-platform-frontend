@@ -2,6 +2,7 @@ package dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
@@ -9,7 +10,8 @@ import java.util.Set;
  * 生成Token请求DTO
  */
 @Data
-public class GenTokenRequest {
+public class GenTokenRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 用户ID(必填)
      */

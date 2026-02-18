@@ -84,7 +84,7 @@ public class HealthReport {
      * 报告日期
      * 检查/体检的实际日期
      */
-    private Date reportDate;
+    private Long reportDate;
     
     /**
      * 上传者ID (关联account表)
@@ -119,13 +119,13 @@ public class HealthReport {
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
-    private Date createTime;
+    private Long createTime;
     
     /**
      * 更新时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    private Date updateTime;
+    private Long updateTime;
     
     /**
      * 删除标记 (0-未删除, 1-已删除)

@@ -2,18 +2,20 @@ package com.zixin.accountapi.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * 更新用户角色请求
  */
 @Data
-public class UpdateUserRolesRequest {
+public class UpdateUserRolesRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
     
     /**
      * 用户账户ID
      */
-    private Long accountId;
+    private Long userId;
     
     /**
      * 新的角色列表

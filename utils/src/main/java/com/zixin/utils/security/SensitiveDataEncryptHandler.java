@@ -3,6 +3,8 @@ package com.zixin.utils.security;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
+import org.apache.ibatis.type.MappedJdbcTypes;
+import org.apache.ibatis.type.MappedTypes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -45,7 +47,8 @@ import java.util.Base64;
  * @author zixin
  */
 @Slf4j
-@Component
+@MappedTypes(String.class)
+@MappedJdbcTypes(JdbcType.VARCHAR)
 public class SensitiveDataEncryptHandler extends BaseTypeHandler<String> {
 
     /**

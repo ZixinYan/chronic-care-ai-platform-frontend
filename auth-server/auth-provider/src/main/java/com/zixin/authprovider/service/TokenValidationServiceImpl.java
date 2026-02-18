@@ -118,17 +118,15 @@ public class TokenValidationServiceImpl implements TokenValidationAPI {
                 log.warn("Cannot revoke invalid token");
                 return response;
             }
-
-            // 3. 将Token加入黑名单
             String tokenId = jwt.getId();
-            jwtUtils.blacklistToken(tokenId, jwt.getExpiresAt());
-
-            // 4. 如果是Refresh Token，也需要从Redis中删除
             String tokenType = jwt.getClaim("type");
-            if ("refresh".equals(tokenType)) {
-                Long userId = Long.parseLong(jwt.getSubject());
-                jwtUtils.revokeRefreshToken(userId, tokenId);
+            // 3. 将 AccessToken加入黑名单
+            if("access".equals(jwt.getClaim(tokenType))) {
+                jwtUtils.blacklistToken(tokenId, jwt.getExpiresAt());
             }
+            // 4. 删除对应的RefreshToken
+            Long userId = Long.parseLong(jwt.getSubject());
+            jwtUtils.revokeRefreshToken(userId, tokenId);
 
             // 5. 构造响应
             response.setCode(ToBCodeEnum.SUCCESS);

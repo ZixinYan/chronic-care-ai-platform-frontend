@@ -64,12 +64,12 @@ public class DoctorSchedule {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private Long createTime;
     
     /**
      * 更新时间
      */
-    private Date updateTime;
+    private Long updateTime;
     
     /**
      * 版本号 (乐观锁)
