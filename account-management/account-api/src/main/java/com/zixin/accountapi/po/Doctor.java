@@ -2,6 +2,7 @@ package com.zixin.accountapi.po;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.annotation.*;
+import com.zixin.utils.security.SensitiveDataEncryptHandler;
 import lombok.Data;
 
 import java.util.Date;
@@ -48,7 +49,7 @@ public class Doctor {
     /**
      * 执业证书编号(加密存储)
      */
-    @TableField(typeHandler = com.zixin.utils.security.SensitiveDataEncryptHandler.class)
+    @TableField(typeHandler = SensitiveDataEncryptHandler.class)
     private String certificationNumber;
     
     /**

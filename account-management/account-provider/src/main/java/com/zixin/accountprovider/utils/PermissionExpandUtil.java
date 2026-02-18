@@ -69,22 +69,7 @@ public final class PermissionExpandUtil {
      */
     private static Set<String> expandToResourcePermissions(RoleCode role, Action action) {
         Set<String> permissions = new HashSet<>();
-        
-        // 当前使用简单的ROLE:ACTION格式
         permissions.add(build(role, action));
-        
-        // TODO: 未来可以扩展为细粒度权限
-        // 例如:
-        // if (role == RoleCode.DOCTOR && action == Action.READ) {
-        //     permissions.add("user:read");
-        //     permissions.add("patient:read");
-        //     permissions.add("medical:record:read");
-        // } else if (role == RoleCode.DOCTOR && action == Action.WRITE) {
-        //     permissions.add("user:write");
-        //     permissions.add("medical:record:write");
-        //     permissions.add("prescription:create");
-        // }
-        
         return permissions;
     }
 

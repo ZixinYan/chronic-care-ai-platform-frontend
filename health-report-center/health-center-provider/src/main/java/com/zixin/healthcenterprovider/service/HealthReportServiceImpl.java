@@ -162,7 +162,7 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             if (request.getReportDate() != null && !request.getReportDate().isEmpty()) {
                 try {
                     Date reportDate = DateUtil.parseDate(request.getReportDate());
-                    report.setReportDate(reportDate);
+                    report.setReportDate(reportDate.getTime());
                 } catch (Exception e) {
                     log.warn("uploadReport - 报告日期解析失败, reportDate: {}", request.getReportDate());
                 }
@@ -176,6 +176,8 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             // 6. 保存到数据库
             int rows = healthReportMapper.insert(report);
             sw.stop();
+
+            // 7. TODO 调用 Kafka 发送报告上传事件（异步处理后续审核等流程）
             
             if (rows > 0) {
                 response.setCode(ToBCodeEnum.SUCCESS);
