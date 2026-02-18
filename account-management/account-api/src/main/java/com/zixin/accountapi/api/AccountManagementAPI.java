@@ -34,5 +34,12 @@ public interface AccountManagementAPI {
      * @return
      */
     DeleteUserResponse deleteUser(DeleteUserRequest deleteUserRequest);
+    
+    /**
+     * 更新用户角色
+     * @param request 更新角色请求
+     * @return 更新结果
+     */
+    UpdateUserRolesResponse updateUserRoles(UpdateUserRolesRequest request);
 }
 

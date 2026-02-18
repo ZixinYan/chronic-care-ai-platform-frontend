@@ -2,8 +2,11 @@ package com.zixin.thirdpartyapi.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class SendAttachEmailRequest extends SendEmailRequest{
+public class SendAttachEmailRequest extends SendEmailRequest implements Serializable {
+    private  static final long serialVersionUID = 1L;
     String fileName;
     String filePath;
 }

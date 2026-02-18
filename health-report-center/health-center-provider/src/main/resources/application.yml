@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: health-center-provider
+  
+  # 数据源配置 (从Nacos获取)
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# Dubbo配置
+dubbo:
+  application:
+    name: health-center-provider
+  registry:
+    address: nacos://localhost:8848
+  protocol:
+    name: dubbo
+    port: 20885
+  scan:
+    base-packages: com.zixin.healthcenterprovider.service
+
+# MyBatis-Plus配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 日志配置
+logging:
+  level:
+    com.zixin.healthcenterprovider: DEBUG
+    com.zixin.healthcenterprovider.mapper: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"

@@ -21,7 +21,7 @@ import java.util.Random;
  * 没有提供下载和删除接口，如有需要自己扩展
  */
 @Slf4j
-public class AliOSSUtils {
+public final class AliOSSUtils {
     @Value("${spring.oss.endpoint}")
     private static String ENDPOINT;
 

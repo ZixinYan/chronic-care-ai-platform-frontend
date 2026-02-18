@@ -2,234 +2,706 @@ package com.zixin.accountprovider.service;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zixin.accountapi.api.AccountManagementAPI;
 import com.zixin.accountapi.dto.*;
-import com.zixin.accountapi.po.Account;
-import com.zixin.accountprovider.mapper.AccountMapper;
+import com.zixin.accountapi.enums.Action;
+import com.zixin.accountapi.enums.RoleCode;
+import com.zixin.accountapi.po.User;
+import com.zixin.accountapi.po.UserRole;
+import com.zixin.accountapi.po.RolePermission;
+import com.zixin.accountprovider.config.RoleConfig;
+import com.zixin.accountprovider.mapper.UserMapper;
+import com.zixin.accountprovider.mapper.UserRoleMapper;
+import com.zixin.accountprovider.mapper.RolePermissionMapper;
 import com.zixin.accountprovider.utils.AccountUtils;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Account Service Implementation
+ */
 @Slf4j
-@Service
 @DubboService
-public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> implements AccountManagementAPI {
-    private final AccountUtils accountUtils;
+public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements AccountManagementAPI {
 
-    AccountServiceImpl(AccountUtils accountUtils, AccountMapper accountMapper){
-        this.accountUtils = accountUtils;
+    private final UserRoleMapper userRoleMapper;
+    private final RolePermissionMapper rolePermissionMapper;
+    private final RoleConfig roleConfig;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+
+    // Password complexity regex
+    private static final Pattern PASSWORD_PATTERN =
+            Pattern.compile("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,20}$");
+
+    // Phone number regex (simple example)
+    private static final Pattern PHONE_PATTERN =
+            Pattern.compile("^1[3-9]\\d{9}$");
+
+    // ID card regex (simple example)
+    private static final Pattern ID_CARD_PATTERN =
+            Pattern.compile("^[1-9]\\d{5}(18|19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]$");
+
+    public AccountServiceImpl(UserRoleMapper userRoleMapper,
+                              RolePermissionMapper rolePermissionMapper,
+                              RoleConfig roleConfig,
+                              BCryptPasswordEncoder bCryptPasswordEncoder) {
+        this.userRoleMapper = userRoleMapper;
+        this.rolePermissionMapper = rolePermissionMapper;
+        this.roleConfig = roleConfig;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
     @Override
-    public LoginResponse login(LoginRequest logInRequest) {
-        String loginAccount = logInRequest.getLoginAccount();
-        String password = logInRequest.getPassword();
-        Account account = new Account();
+    public LoginResponse login(LoginRequest loginRequest) {
+        String loginAccount = loginRequest.getLoginAccount();
+        String password = loginRequest.getPassword();
         LoginResponse loginResponse = new LoginResponse();
-        // 根据手机号和用户名获取账户信息
-        try {
-            account = this.baseMapper.selectOne(new QueryWrapper<Account>()
-                    .eq("username", loginAccount).or().eq("phone", loginAccount).or().eq("id_card", loginAccount));
-        }
-        catch (Exception e){
-            log.error("fail to query account by loginAccount:{},error:{}",loginAccount,e.getMessage());
+
+        // 1. Validate request parameters
+        if (!StringUtils.hasText(loginAccount) || !StringUtils.hasText(password)) {
+            log.warn("Login failed - empty account or password");
             loginResponse.setCode(ToBCodeEnum.FAIL);
-            loginResponse.setMessage(e.getMessage());
+            loginResponse.setMessage("Login account or password cannot be empty");
             return loginResponse;
         }
 
-        if (account == null) {
-            log.info("fail to login, account: {}", loginAccount);
+        User user;
+        try {
+            // 2. Find account by username/phone hash/id card hash
+            String accountHash = generateHash(loginAccount);
+
+            user = this.baseMapper.selectOne(new LambdaQueryWrapper<User>()
+                    .eq(User::getUsername, loginAccount)
+                    .or()
+                    .eq(User::getPhoneHash, accountHash)
+                    .or()
+                    .eq(User::getIdCardHash, accountHash)
+                    .last("LIMIT 1"));
+
+        } catch (Exception e) {
+            log.error("Failed to query account by loginAccount: {}, error: {}", loginAccount, e.getMessage());
             loginResponse.setCode(ToBCodeEnum.FAIL);
-            loginResponse.setMessage("account is null");
+            loginResponse.setMessage("System error, please try again later");
             return loginResponse;
         }
-        // 校验密码
-        String targetPassword = account.getPassword();
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        if (!passwordEncoder.matches(password, targetPassword)) {
-            log.info("password is wrong, account: {}", loginAccount);
+
+        if (user == null) {
+            log.info("Login failed - account not found: {}", loginAccount);
+            loginResponse.setCode(ToBCodeEnum.FAIL);
+            loginResponse.setMessage("Account or password incorrect");
             return loginResponse;
         }
-        // 登录信息封装
-        loginResponse.setData(new LoginResponse.LoginUserDTO(
-                account.getAccountId(),
-                account.getUsername(),
-                account.getNickname(),
-                account.getEmail(),
-                account.getGender(),
-                account.getAvatarUrl(),
-                account.getAddress(),
-                account.getBirthday(),
-                account.getIdCard(),
-                account.getExt()
-        ));
+
+        // 3. Verify password using BCrypt
+        if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
+            log.info("Login failed - wrong password for account: {}, password:{}, rawPassword:{}", loginAccount, password, user.getPassword());
+
+            // Record login failure (optional)
+            recordLoginFailure(user.getUserId());
+
+            loginResponse.setCode(ToBCodeEnum.FAIL);
+            loginResponse.setMessage("Account or password incorrect");
+            return loginResponse;
+        }
+
+        // 4. Clear failure records on successful login
+        clearLoginFailures(user.getUserId());
+
+        // 5. Get user roles and permissions
+        List<Integer> roleCodes = getUserRoleCodes(user.getUserId());
+        Set<String> permissions = getUserPermissions(roleCodes);
+
+        // 6. Build response
+        LoginResponse.LoginUserDTO userDTO = buildLoginUserDTO(user, roleCodes, permissions);
+
+        loginResponse.setData(userDTO);
         loginResponse.setCode(ToBCodeEnum.SUCCESS);
-        log.info("loginResponse: {}", loginResponse);
+        loginResponse.setMessage("Login successful");
+
+        log.info("Login successful - account: {}, userId: {}", loginAccount, user.getUserId());
         return loginResponse;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public RegisterResponse register(RegisterRequest registerRequest) {
-        Account account = new Account();
         RegisterResponse registerResponse = new RegisterResponse();
-        // 赋值基础信息
-        account.setUsername(registerRequest.getUsername());
-        account.setNickname(registerRequest.getNickname());
-        account.setPhone(registerRequest.getPhone());
-        account.setAddress(registerRequest.getAddress());
-        account.setBirthday(registerRequest.getBirthday());
-        account.setGender(registerRequest.getGender());
-        account.setIdCard(registerRequest.getIdCard());
-        // 加密密码
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        String encodedPassword = passwordEncoder.encode(registerRequest.getPassword());
-        account.setPassword(encodedPassword);
-        // 防重校验
-        try{
-            this.baseMapper.insert(account);
-        }catch (DuplicateKeyException e){
-            log.error("fail to register account, repeated account: {}", account);
+
+        try {
+            // 1. Validate request parameters
+            validateRegisterRequest(registerRequest);
+
+            // 2. Check account uniqueness
+            checkAccountUniqueness(registerRequest);
+
+            // 3. Build user object
+            User user = buildUserFromRequest(registerRequest);
+            log.info("Register account: {}", user);
+            // 4. Insert user
+            this.baseMapper.insert(user);
+
+            // 5. Assign roles (batch insert)
+            assignRolesToUser(user.getUserId(), registerRequest.getRoleCodes());
+
+            log.info("User registered successfully - userId: {}, username: {}",
+                    user.getUserId(), user.getUsername());
+
+            registerResponse.setCode(ToBCodeEnum.SUCCESS);
+            registerResponse.setMessage("Registration successful");
+
+        } catch (BusinessException e) {
+            log.warn("Registration failed: {}", e.getMessage());
             registerResponse.setCode(ToBCodeEnum.FAIL);
             registerResponse.setMessage(e.getMessage());
-            return registerResponse;
-        }catch (Exception e){
-            log.error("fail to register account, db wrong: {}", account);
+        } catch (DuplicateKeyException e) {
+            log.error("Registration failed - duplicate account: {}", registerRequest.getUsername());
             registerResponse.setCode(ToBCodeEnum.FAIL);
-            registerResponse.setMessage(e.getMessage());
-            return registerResponse;
+            registerResponse.setMessage("Username, phone number or ID card already exists");
+        } catch (Exception e) {
+            log.error("Registration failed - system error", e);
+            registerResponse.setCode(ToBCodeEnum.FAIL);
+            registerResponse.setMessage("System error, please try again later");
         }
-        registerResponse.setCode(ToBCodeEnum.SUCCESS);
+
         return registerResponse;
     }
 
     @Override
-    public GetUserInfoResponse getUserInfo(GetUserInfoRequest getUserInfoRequest) {
-        GetUserInfoResponse getUserInfoResponse = new GetUserInfoResponse();
-        String join = StrUtil.join(",", getUserInfoRequest.getUserIds());
-        List<GetUserInfoResponse.UserInfoDTO> userInfoDTOList;
+    public GetUserInfoResponse getUserInfo(GetUserInfoRequest request) {
+        GetUserInfoResponse response = new GetUserInfoResponse();
+
         try {
-             userInfoDTOList = lambdaQuery()
-                    .in(Account::getAccountId, getUserInfoRequest)
-                    .last("order by field(id, " + join + ")")
-                    .list()
-                    .stream().map(account ->
-                            BeanUtil.copyProperties(account, GetUserInfoResponse.UserInfoDTO.class))
+            List<Long> userIds = request.getUserIds();
+            if (userIds == null || userIds.isEmpty()) {
+                response.setCode(ToBCodeEnum.SUCCESS);
+                response.setUsers(Collections.emptyList());
+                return response;
+            }
+
+            // Batch query users (safe way)
+            List<User> users = lambdaQuery()
+                    .in(User::getUserId, userIds)
+                    .list();
+
+            // Convert to Map for maintaining order
+            Map<Long, User> userMap = users.stream()
+                    .collect(Collectors.toMap(User::getUserId, u -> u));
+
+            List<GetUserInfoResponse.UserInfoDTO> userInfoDTOList = userIds.stream()
+                    .map(userMap::get)
+                    .filter(Objects::nonNull)
+                    .map(user -> BeanUtil.copyProperties(user, GetUserInfoResponse.UserInfoDTO.class))
                     .collect(Collectors.toList());
-        }catch (Exception e){
-            log.error("fail to get user info, error:{}",e.getMessage());
-            getUserInfoResponse.setCode(ToBCodeEnum.FAIL);
-            getUserInfoResponse.setMessage(e.getMessage());
-            return getUserInfoResponse;
+
+            response.setCode(ToBCodeEnum.SUCCESS);
+            response.setUsers(userInfoDTOList);
+
+            log.debug("Retrieved info for {} users", userInfoDTOList.size());
+
+        } catch (Exception e) {
+            log.error("Failed to get user info", e);
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("Failed to get user info: " + e.getMessage());
         }
-        getUserInfoResponse.setCode(ToBCodeEnum.SUCCESS);
-        getUserInfoResponse.setUsers(userInfoDTOList);
-        return getUserInfoResponse;
+
+        return response;
     }
 
     @Override
-    public UpdateUserInfoResponse updateUserInfo(UpdateUserInfoRequest updateUserInfoRequest) {
-        Long accountId = Long.valueOf(updateUserInfoRequest.getUpdateData().get("account_id").toString());
-        Account account = new Account();
+    public UpdateUserInfoResponse updateUserInfo(UpdateUserInfoRequest request) {
+        UpdateUserInfoResponse response = new UpdateUserInfoResponse();
 
-        UpdateUserInfoResponse updateUserInfoResponse = new UpdateUserInfoResponse();
-        if(accountUtils.validateUpdateData(updateUserInfoRequest.getUpdateData())){
-            log.error("illegal update data,{}", updateUserInfoRequest.getUpdateData());
-            updateUserInfoResponse.setCode(ToBCodeEnum.FAIL);
-            updateUserInfoResponse.setMessage("illegal update data");
-            return updateUserInfoResponse;
-        }
         try {
-            account = this.baseMapper.selectById(accountId);
-        }catch (Exception e){
-            log.error("fail to get account, error:{}",e.getMessage());
-            updateUserInfoResponse.setCode(ToBCodeEnum.FAIL);
-            updateUserInfoResponse.setMessage(e.getMessage());
-            return updateUserInfoResponse;
+            Map<String, Objects> updateData = request.getUpdateData();
+            if (updateData == null || !updateData.containsKey("account_id")) {
+                log.warn("Update failed - missing account_id");
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("account_id is required");
+                return response;
+            }
+
+            // Safely get account_id
+            Long accountId;
+            try {
+                accountId = Long.valueOf(updateData.get("account_id").toString());
+            } catch (NumberFormatException e) {
+                log.warn("Update failed - invalid account_id format: {}", updateData.get("account_id"));
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Invalid account_id format");
+                return response;
+            }
+
+            // Validate update data
+            if (!AccountUtils.validateUpdateData(updateData)) {
+                log.warn("Update failed - illegal update data: {}", updateData);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Illegal update data");
+                return response;
+            }
+
+            // Check if user exists
+            User user = this.baseMapper.selectById(accountId);
+            if (user == null) {
+                log.warn("Update failed - user not found: {}", accountId);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("User not found");
+                return response;
+            }
+
+            // Build update condition
+            UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
+            updateWrapper.eq("user_id", accountId);
+
+            updateData.forEach((key, value) -> {
+                if (value != null && !"account_id".equals(key)) {
+                    updateWrapper.set(key, value);
+
+                    // Handle special fields
+                    if ("phone".equals(key)) {
+                        String phoneHash = DigestUtils.sha256Hex(value.toString());
+                        updateWrapper.set("phone_hash", phoneHash);
+                    } else if ("id_card".equals(key)) {
+                        String idCardHash = DigestUtils.sha256Hex(value.toString());
+                        updateWrapper.set("id_card_hash", idCardHash);
+                    }
+                }
+            });
+
+            updateWrapper.set("update_time", System.currentTimeMillis());
+
+            // Execute update
+            boolean success = update(updateWrapper);
+            if (!success) {
+                log.warn("Update failed for user: {}", accountId);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Update failed");
+                return response;
+            }
+
+            log.info("User info updated successfully - userId: {}", accountId);
+            response.setCode(ToBCodeEnum.SUCCESS);
+            response.setMessage("Update successful");
+
+        } catch (Exception e) {
+            log.error("Failed to update user info", e);
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("Update failed: " + e.getMessage());
         }
 
-        if (account == null) {
-            log.error("fail to update user info, account is null");
-            updateUserInfoResponse.setCode(ToBCodeEnum.FAIL);
-            updateUserInfoResponse.setMessage("account is null");
-            return updateUserInfoResponse;
-        }
-        UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("account_id", accountId);
-        updateUserInfoRequest.getUpdateData().forEach((key,value) -> {
-            if(value != null) {
-                updateWrapper.set(key, value);
-            }
-        });
-        updateWrapper.set("update_time", new Date());
-
-        try{
-            boolean check = update(updateWrapper);
-            if (!check) {
-                updateUserInfoResponse.setCode(ToBCodeEnum.FAIL);
-                updateUserInfoResponse.setMessage("account update failed");
-                return updateUserInfoResponse;
-            }
-        }catch (Exception e){
-            log.error("fail to update user info, error:{}",e.getMessage());
-            updateUserInfoResponse.setCode(ToBCodeEnum.FAIL);
-            updateUserInfoResponse.setMessage(e.getMessage());
-            return updateUserInfoResponse;
-        }
-        updateUserInfoResponse.setCode(ToBCodeEnum.SUCCESS);
-        return updateUserInfoResponse;
+        return response;
     }
 
     @Override
-    public UpdatePasswordResponse updatePassword(UpdatePasswordRequest updatePasswordRequest) {
-        Long userId = updatePasswordRequest.getUserId();
-        String oldPassword = updatePasswordRequest.getOldPassword();
-        Account account = new Account();
-        UpdatePasswordResponse updatePasswordResponse = new UpdatePasswordResponse();
+    public UpdatePasswordResponse updatePassword(UpdatePasswordRequest request) {
+        Long userId = request.getUserId();
+        String oldPassword = request.getOldPassword();
+        String newPassword = request.getNewPassword();
+
+        UpdatePasswordResponse response = new UpdatePasswordResponse();
+
         try {
-            account = this.baseMapper.selectById(userId);
-            if (!oldPassword.equals(account.getPassword())) {
-                log.error("fail to update password, old password is wrong");
-                updatePasswordResponse.setCode(ToBCodeEnum.FAIL);
-                updatePasswordResponse.setMessage("old password is wrong");
-                return updatePasswordResponse;
+            // Validate input
+            if (userId == null || !StringUtils.hasText(oldPassword) || !StringUtils.hasText(newPassword)) {
+                log.warn("Password update failed - missing required parameters");
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("User ID, old password and new password are required");
+                return response;
             }
-            account.setPassword(oldPassword);
-            this.baseMapper.updateById(account);
-        }catch (Exception e){
-            log.error("fail to update password, error:{}",e.getMessage());
-            updatePasswordResponse.setCode(ToBCodeEnum.FAIL);
-            updatePasswordResponse.setMessage(e.getMessage());
-            return updatePasswordResponse;
+
+            // Validate new password complexity
+            if (!isValidPassword(newPassword)) {
+                log.warn("Password update failed - new password does not meet complexity requirements");
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Password must be 8-20 characters and contain at least one uppercase letter, one lowercase letter, one number and one special character");
+                return response;
+            }
+
+            // Check if old password equals new password
+            if (oldPassword.equals(newPassword)) {
+                log.warn("Password update failed - new password cannot be the same as old password");
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("New password cannot be the same as old password");
+                return response;
+            }
+
+            // 1. Find user
+            User user = this.baseMapper.selectById(userId);
+            if (user == null) {
+                log.warn("Password update failed - user not found: {}", userId);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("User not found");
+                return response;
+            }
+
+            // 2. Verify old password using BCrypt
+            if (!bCryptPasswordEncoder.matches(oldPassword, user.getPassword())) {
+                log.warn("Password update failed - wrong old password for user: {}", userId);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Old password is incorrect");
+                return response;
+            }
+
+            // 3. Encrypt and update new password
+            String encodedNewPassword = bCryptPasswordEncoder.encode(newPassword);
+            user.setPassword(encodedNewPassword);
+            this.baseMapper.updateById(user);
+
+            log.info("Password updated successfully for user: {}", userId);
+            response.setCode(ToBCodeEnum.SUCCESS);
+            response.setMessage("Password updated successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to update password for user: {}", userId, e);
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("Password update failed: " + e.getMessage());
         }
-        updatePasswordResponse.setCode(ToBCodeEnum.SUCCESS);
-        return updatePasswordResponse;
+
+        return response;
     }
 
     @Override
     public DeleteUserResponse deleteUser(DeleteUserRequest deleteUserRequest) {
-        DeleteUserResponse deleteUserResponse = new DeleteUserResponse();
+        DeleteUserResponse response = new DeleteUserResponse();
+
         try {
-            removeByIds(Arrays.asList(deleteUserRequest.getUserId()));
-        }catch (Exception e){
-            log.error("fail to delete user, error:{}",e.getMessage());
-            deleteUserResponse.setCode(ToBCodeEnum.FAIL);
-            deleteUserResponse.setMessage(e.getMessage());
-            return deleteUserResponse;
+            Long[] userIds = deleteUserRequest.getUserId();
+            if (userIds == null || userIds.length == 0) {
+                log.warn("Delete failed - no user IDs provided");
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("User IDs are required");
+                return response;
+            }
+
+            boolean success = removeByIds(Arrays.asList(userIds));
+
+            if (success) {
+                log.info("Users deleted successfully: {}", Arrays.toString(userIds));
+                response.setCode(ToBCodeEnum.SUCCESS);
+                response.setMessage("Users deleted successfully");
+            } else {
+                log.warn("Failed to delete users: {}", Arrays.toString(userIds));
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Failed to delete users");
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to delete users", e);
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("Delete failed: " + e.getMessage());
         }
-        deleteUserResponse.setCode(ToBCodeEnum.SUCCESS);
-        return deleteUserResponse;
+
+        return response;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UpdateUserRolesResponse updateUserRoles(UpdateUserRolesRequest request) {
+        UpdateUserRolesResponse response = new UpdateUserRolesResponse();
+
+        try {
+            Long accountId = request.getUserId();
+            List<Integer> newRoleCodes = request.getRoleCodes();
+
+            if (accountId == null) {
+                log.warn("Update roles failed - account ID is null");
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Account ID is required");
+                return response;
+            }
+
+            if (newRoleCodes == null || newRoleCodes.isEmpty()) {
+                log.warn("Update roles failed - role list is empty for account: {}", accountId);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Role list cannot be empty");
+                return response;
+            }
+
+            // Verify account exists
+            User user = this.baseMapper.selectById(accountId);
+            if (user == null) {
+                log.warn("Update roles failed - account not found: {}", accountId);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("Account not found");
+                return response;
+            }
+
+            // Delete all existing roles
+            userRoleMapper.deleteByUserId(accountId);
+
+            // Insert new roles (batch insert)
+            if (!newRoleCodes.isEmpty()) {
+                List<UserRole> userRoles = newRoleCodes.stream()
+                        .map(roleCode -> {
+                            UserRole userRole = new UserRole();
+                            userRole.setUserId(accountId);
+                            userRole.setRoleCode(roleCode);
+                            userRole.setCreateTime(System.currentTimeMillis());
+                            return userRole;
+                        })
+                        .collect(Collectors.toList());
+
+                userRoleMapper.batchInsert(userRoles);
+            }
+
+            log.info("User roles updated successfully - accountId: {}, new roles: {}",
+                    accountId, newRoleCodes);
+
+            response.setCode(ToBCodeEnum.SUCCESS);
+            response.setMessage("Roles updated successfully");
+            response.setRoleCodes(newRoleCodes);
+
+        } catch (Exception e) {
+            log.error("Failed to update user roles for accountId: {}", request.getUserId(), e);
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("Failed to update roles: " + e.getMessage());
+        }
+
+        return response;
+    }
+
+    /**
+     * Generate hash with salt
+     */
+    private String generateHash(String input) {
+        // Add salt for better security
+        String salt = "zixin-salt"; // Should be read from configuration
+        return DigestUtils.sha256Hex(salt + input);
+    }
+
+    /**
+     * Get user role codes
+     */
+    private List<Integer> getUserRoleCodes(Long userId) {
+        return userRoleMapper.selectRoleCodesByUserId(userId);
+    }
+
+    /**
+     * Get user permissions from role codes
+     */
+    private Set<String> getUserPermissions(List<Integer> roleCodes) {
+        if (roleCodes.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        List<RolePermission> rolePermissions = rolePermissionMapper.selectByRoleCodes(roleCodes);
+
+        return rolePermissions.stream()
+                .map(this::formatPermission)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Format permission string
+     */
+    private String formatPermission(RolePermission rp) {
+        try {
+            String roleName = RoleCode.fromCode(rp.getRoleCode()).name();
+            String actionName = Action.fromCode(rp.getActionCode()).name();
+            return roleName + ":" + actionName;
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid role or action code: roleCode={}, actionCode={}",
+                    rp.getRoleCode(), rp.getActionCode());
+            return null;
+        }
+    }
+
+    /**
+     * Build login user DTO
+     */
+    private LoginResponse.LoginUserDTO buildLoginUserDTO(User user, List<Integer> roleCodes, Set<String> permissions) {
+        return new LoginResponse.LoginUserDTO(
+                user.getUserId(),
+                user.getUsername(),
+                user.getNickname(),
+                user.getEmail(),
+                user.getGender(),
+                user.getAvatarUrl(),
+                user.getAddress(),
+                user.getBirthday(),
+                user.getIdCard(),
+                roleCodes,
+                permissions,
+                user.getExt()
+        );
+    }
+
+    /**
+     * Validate password complexity
+     */
+    private boolean isValidPassword(String password) {
+        return password != null && PASSWORD_PATTERN.matcher(password).matches();
+    }
+
+    /**
+     * Validate phone number
+     */
+    private boolean isValidPhone(String phone) {
+        return phone != null && PHONE_PATTERN.matcher(phone).matches();
+    }
+
+    /**
+     * Validate ID card
+     */
+    private boolean isValidIdCard(String idCard) {
+        return idCard != null && ID_CARD_PATTERN.matcher(idCard).matches();
+    }
+
+    /**
+     * Validate registration request
+     */
+    private void validateRegisterRequest(RegisterRequest request) {
+        if (!StringUtils.hasText(request.getUsername())) {
+            throw new BusinessException("Username is required");
+        }
+
+        if (!StringUtils.hasText(request.getPassword())) {
+            throw new BusinessException("Password is required");
+        }
+
+        if (!isValidPassword(request.getPassword())) {
+            throw new BusinessException("Password must be 8-20 characters and contain at least one uppercase letter, one lowercase letter, one number and one special character");
+        }
+
+        if (StringUtils.hasText(request.getPhone()) && !isValidPhone(request.getPhone())) {
+            throw new BusinessException("Invalid phone number format");
+        }
+
+        if (StringUtils.hasText(request.getIdCard()) && !isValidIdCard(request.getIdCard())) {
+            throw new BusinessException("Invalid ID card format");
+        }
+    }
+
+    /**
+     * Check account uniqueness
+     */
+    private void checkAccountUniqueness(RegisterRequest request) {
+        // Check username
+        Long usernameCount = lambdaQuery()
+                .eq(User::getUsername, request.getUsername())
+                .count();
+        if (usernameCount > 0) {
+            throw new BusinessException("Username already exists");
+        }
+
+        // Check phone
+        if (StringUtils.hasText(request.getPhone())) {
+            String phoneHash = generateHash(request.getPhone());
+            Long phoneCount = lambdaQuery()
+                    .eq(User::getPhoneHash, phoneHash)
+                    .count();
+            if (phoneCount > 0) {
+                throw new BusinessException("Phone number already registered");
+            }
+        }
+
+        // Check ID card
+        if (StringUtils.hasText(request.getIdCard())) {
+            String idCardHash = generateHash(request.getIdCard());
+            Long idCardCount = lambdaQuery()
+                    .eq(User::getIdCardHash, idCardHash)
+                    .count();
+            if (idCardCount > 0) {
+                throw new BusinessException("ID card already registered");
+            }
+        }
+    }
+
+    /**
+     * Build user from registration request
+     */
+    private User buildUserFromRequest(RegisterRequest request) {
+        User user = new User();
+
+        user.setUsername(request.getUsername());
+        user.setNickname(request.getNickname());
+        user.setPhone(request.getPhone());
+        user.setAddress(request.getAddress());
+        user.setBirthday(request.getBirthday());
+        user.setGender(request.getGender());
+        user.setIdCard(request.getIdCard());
+
+        // Generate phone hash
+        if (StringUtils.hasText(request.getPhone())) {
+            user.setPhoneHash(generateHash(request.getPhone()));
+        }
+
+        // Generate ID card hash
+        if (StringUtils.hasText(request.getIdCard())) {
+            user.setIdCardHash(generateHash(request.getIdCard()));
+        }
+
+        // Encrypt password
+        user.setPassword(bCryptPasswordEncoder.encode(request.getPassword()));
+        return user;
+    }
+
+    /**
+     * Assign roles to user (batch insert)
+     */
+    private void assignRolesToUser(Long userId, List<Integer> roleCodes) {
+        // Determine final role list
+        List<Integer> finalRoleCodes = roleCodes;
+        if (finalRoleCodes == null || finalRoleCodes.isEmpty()) {
+            finalRoleCodes = roleConfig.getDefaultRoles();
+            log.info("User {} assigned default roles: {}", userId, finalRoleCodes);
+        }
+
+        if (finalRoleCodes.isEmpty()) {
+            return;
+        }
+
+        // Batch insert
+        List<UserRole> userRoles = finalRoleCodes.stream()
+                .map(roleCode -> {
+                    UserRole userRole = new UserRole();
+                    userRole.setUserId(userId);
+                    userRole.setRoleCode(roleCode);
+                    userRole.setCreateTime(System.currentTimeMillis());
+                    return userRole;
+                })
+                .collect(Collectors.toList());
+
+        userRoleMapper.batchInsert(userRoles);
+        log.info("Assigned {} roles to user {}", userRoles.size(), userId);
+    }
+
+    /**
+     * Record login failure (optional)
+     */
+    private void recordLoginFailure(Long userId) {
+        // Implementation depends on your requirements
+        // Could increment a counter in Redis
+    }
+
+    /**
+     * Clear login failure records (optional)
+     */
+    private void clearLoginFailures(Long userId) {
+        // Implementation depends on your requirements
+        // Could delete failure records from Redis
+    }
+
+    /**
+     * Business Exception class
+     */
+    private static class BusinessException extends RuntimeException {
+        public BusinessException(String message) {
+            super(message);
+        }
     }
 }
