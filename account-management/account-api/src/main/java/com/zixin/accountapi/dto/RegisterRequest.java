@@ -1,5 +1,7 @@
 package com.zixin.accountapi.dto;
 
+import com.zixin.accountapi.po.Doctor;
+import com.zixin.accountapi.po.Patient;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -24,4 +26,6 @@ public class RegisterRequest implements Serializable {
      * 如果不传，使用系统默认角色
      */
     private List<Integer> roleCodes;
+    private Doctor doctor;
+    private Patient patient;
 }

@@ -45,7 +45,7 @@
         "visibility": "public",
         "parameters": [
           {
-            "name": "accountId",
+            "name": "userId",
             "param_type": "Long/Integer",
             "is_optional": false,
             "description": "The account ID whose role associations should be deleted"

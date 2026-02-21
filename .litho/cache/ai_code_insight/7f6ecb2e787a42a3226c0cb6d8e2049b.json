@@ -16,10 +16,10 @@
         "UpdateUserRolesRequest"
       ]
     },
-    "detailed_description": "UpdateUserRolesRequest 是一个位于账户管理API模块中的数据传输对象(DTO),专门用于处理用户角色更新场景的请求数据封装。\n\n该组件设计简洁,包含两个核心字段:\n1. accountId (Long类型): 用于标识需要更新角色的目标用户账户\n2. roleCodes (List<Integer>类型): 新的角色代码列表,根据注释说明,该列表会完全替换用户现有的所有角色(全量替换模式)\n\n组件采用Lombok的@Data注解自动生成getter/setter、equals、hashCode、toString等方法,减少了样板代码,提高了开发效率。\n\n从架构角度看,该DTO位于account-api模块,属于对外暴露的API契约的一部分,用于定义客户端与服务端之间的数据交互格式。这种设计支持微服务间的松耦合通信。\n\n业务语义上,采用全量替换而非增量更新的设计,简化了角色管理逻辑,但也要求调用方在更新时提供完整的角色列表。",
+    "detailed_description": "UpdateUserRolesRequest 是一个位于账户管理API模块中的数据传输对象(DTO),专门用于处理用户角色更新场景的请求数据封装。\n\n该组件设计简洁,包含两个核心字段:\n1. userId (Long类型): 用于标识需要更新角色的目标用户账户\n2. roleCodes (List<Integer>类型): 新的角色代码列表,根据注释说明,该列表会完全替换用户现有的所有角色(全量替换模式)\n\n组件采用Lombok的@Data注解自动生成getter/setter、equals、hashCode、toString等方法,减少了样板代码,提高了开发效率。\n\n从架构角度看,该DTO位于account-api模块,属于对外暴露的API契约的一部分,用于定义客户端与服务端之间的数据交互格式。这种设计支持微服务间的松耦合通信。\n\n业务语义上,采用全量替换而非增量更新的设计,简化了角色管理逻辑,但也要求调用方在更新时提供完整的角色列表。",
     "responsibilities": [
       "封装用户角色更新请求的数据结构,定义API接口契约",
-      "提供用户账户标识(accountId)和新角色列表(roleCodes)的数据载体",
+      "提供用户账户标识(userId)和新角色列表(roleCodes)的数据载体",
       "支持全量替换模式的角色更新业务场景",
       "作为account-api模块对外暴露的DTO,实现服务间数据传输标准化"
     ],

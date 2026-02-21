@@ -17,7 +17,7 @@
         "DoctorMapper"
       ]
     },
-    "detailed_description": "DoctorMapper是一个基于MyBatis-Plus框架的数据访问层接口，位于账户管理系统的provider模块中。该接口通过继承BaseMapper<Doctor>，自动获得了对Doctor实体的完整CRUD操作能力，无需编写任何SQL语句即可完成基础的数据库操作。\n\n从架构角度看，该组件遵循了典型的分层架构设计：\n1. 位于mapper层，专注于数据访问职责\n2. 使用@Mapper注解标识为MyBatis的Mapper接口，支持Spring自动扫描和注入\n3. 依赖account-api模块中定义的Doctor实体类，实现了API与实现的分离\n\nDoctor实体包含医生的核心业务属性：\n- 基础身份信息：id、accountId（关联账户表）\n- 专业信息：department（科室）、title（职称）、experience（工作经验）\n- 资质信息：certificationNumber（执业证书编号，加密存储）\n- 个人信息：education（学历）、bio（简介）\n- 系统字段：createTime、updateTime、dele（逻辑删除）、version（乐观锁）、ext（JSON扩展字段）\n\n该Mapper通过BaseMapper继承获得的能力包括：\n- insert/insertBatch：插入操作\n- deleteById/deleteBatchIds：删除操作\n- updateById/update：更新操作\n- selectById/selectList/selectPage：查询操作\n- 支持Wrapper条件构造器的灵活查询",
+    "detailed_description": "DoctorMapper是一个基于MyBatis-Plus框架的数据访问层接口，位于账户管理系统的provider模块中。该接口通过继承BaseMapper<Doctor>，自动获得了对Doctor实体的完整CRUD操作能力，无需编写任何SQL语句即可完成基础的数据库操作。\n\n从架构角度看，该组件遵循了典型的分层架构设计：\n1. 位于mapper层，专注于数据访问职责\n2. 使用@Mapper注解标识为MyBatis的Mapper接口，支持Spring自动扫描和注入\n3. 依赖account-api模块中定义的Doctor实体类，实现了API与实现的分离\n\nDoctor实体包含医生的核心业务属性：\n- 基础身份信息：id、userId（关联账户表）\n- 专业信息：department（科室）、title（职称）、experience（工作经验）\n- 资质信息：certificationNumber（执业证书编号，加密存储）\n- 个人信息：education（学历）、bio（简介）\n- 系统字段：createTime、updateTime、dele（逻辑删除）、version（乐观锁）、ext（JSON扩展字段）\n\n该Mapper通过BaseMapper继承获得的能力包括：\n- insert/insertBatch：插入操作\n- deleteById/deleteBatchIds：删除操作\n- updateById/update：更新操作\n- selectById/selectList/selectPage：查询操作\n- 支持Wrapper条件构造器的灵活查询",
     "responsibilities": [
       "提供Doctor实体的数据库持久化操作入口",
       "通过继承BaseMapper自动获取标准CRUD方法",

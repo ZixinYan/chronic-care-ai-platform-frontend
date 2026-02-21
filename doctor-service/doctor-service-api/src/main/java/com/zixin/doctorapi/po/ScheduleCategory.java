@@ -12,7 +12,7 @@ import lombok.Data;
  * 定义各种日程类型
  */
 @Data
-@TableName("schedule_category")
+@TableName("doctor_schedule_category")
 public class ScheduleCategory {
     
     /**

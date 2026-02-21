@@ -2,23 +2,25 @@ package com.zixin.doctorprovider.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.zixin.accountapi.dto.GetDoctorInfoRequest;
+import com.zixin.accountapi.dto.GetPatientInfoRequest;
+import com.zixin.accountapi.vo.DoctorVO;
+import com.zixin.accountapi.vo.PatientVO;
 import com.zixin.doctorapi.api.DoctorWorkbenchAPI;
 import com.zixin.doctorapi.dto.*;
 import com.zixin.doctorapi.enums.SchedulePriority;
 import com.zixin.doctorapi.enums.ScheduleStatus;
-import com.zixin.doctorapi.po.Doctor;
 import com.zixin.doctorapi.po.DoctorSchedule;
 import com.zixin.doctorapi.po.ScheduleCategory;
-import com.zixin.doctorapi.vo.DoctorVO;
 import com.zixin.doctorapi.vo.ScheduleVO;
-import com.zixin.doctorprovider.mapper.DoctorMapper;
+import com.zixin.doctorprovider.client.DoctorClient;
 import com.zixin.doctorprovider.mapper.DoctorScheduleMapper;
 import com.zixin.doctorprovider.mapper.ScheduleCategoryMapper;
+import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,39 +52,40 @@ import java.util.stream.Collectors;
 @DubboService
 @Slf4j
 public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
-    
-    @Autowired
-    private DoctorMapper doctorMapper;
-    
-    @Autowired
-    private DoctorScheduleMapper scheduleMapper;
-    
-    @Autowired
-    private ScheduleCategoryMapper categoryMapper;
-    
+    private final DoctorScheduleMapper scheduleMapper;
+    private final ScheduleCategoryMapper categoryMapper;
+    private final DoctorClient doctorClient;
+
+    public DoctorWorkbenchServiceImpl(DoctorScheduleMapper scheduleMapper, ScheduleCategoryMapper categoryMapper, DoctorClient doctorClient) {
+        this.scheduleMapper = scheduleMapper;
+        this.categoryMapper = categoryMapper;
+        this.doctorClient = doctorClient;
+    }
+
+
     @Override
     public GenerateScheduleResponse generateScheduleSuggestion(GenerateScheduleRequest request) {
         GenerateScheduleResponse response = new GenerateScheduleResponse();
-        
+
         try {
             // 验证医生存在
-            Doctor doctor = doctorMapper.selectById(request.getDoctorId());
-            if (doctor == null) {
+            DoctorVO doctorVO = doctorClient.getDoctorInfo(GetDoctorInfoRequest.builder()
+                    .userId(request.getDoctorId())
+                    .build());
+            if (doctorVO == null) {
+                log.error("Doctor not found for userId: {}", request.getDoctorId());
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("医生不存在");
                 return response;
             }
             
             // TODO: 接入AI服务生成智能日程推荐
-            // 这里先实现简单的逻辑，后续对接AI服务
-            List<ScheduleVO> recommendations = generateMockSchedules(request);
-            
+            List<DoctorSchedule> recommendations = generateSchedules(request);
+            scheduleMapper.batchInsert(recommendations);
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("AI日程推荐生成成功");
-            response.setRecommendedSchedules(recommendations);
-            response.setRecommendation("根据历史数据分析，为您推荐了以下日程安排");
             
-            log.info("Generate schedule suggestion success, doctorId: {}, date: {}", 
+            log.info("Generate schedule suggestion success, userId: {}, date: {}",
                     request.getDoctorId(), request.getScheduleDay());
         } catch (Exception e) {
             log.error("Generate schedule suggestion error", e);
@@ -154,7 +157,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 return response;
             }
             
-            // 2. 业务级权限验证: 只能查看自己的日程
+            // 2. 只能查看自己的日程
             if (!schedule.getDoctorId().equals(doctorId)) {
                 log.warn("Permission denied: doctor {} tried to access schedule {} owned by doctor {}", 
                         doctorId, scheduleId, schedule.getDoctorId());
@@ -194,7 +197,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 return response;
             }
             
-            // 2. 业务级权限验证: 只能完成自己的日程
+            // 2. 只能完成自己的日程
             if (!schedule.getDoctorId().equals(request.getDoctorId())) {
                 log.warn("Permission denied: doctor {} tried to complete schedule {} owned by doctor {}", 
                         request.getDoctorId(), request.getScheduleId(), schedule.getDoctorId());
@@ -203,7 +206,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 return response;
             }
             
-            // 3. 业务规则验证: 只能完成待处理或进行中的日程
+            // 3. 只能完成待处理或进行中的日程
             if (ScheduleStatus.COMPLETED.getCode().equals(schedule.getStatus())) {
                 log.warn("Schedule already completed, scheduleId: {}", request.getScheduleId());
                 response.setCode(ToBCodeEnum.FAIL);
@@ -218,7 +221,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 return response;
             }
             
-            // 4. 业务规则验证: 诊断报告不能为空
+            // 4. 诊断报告不能为空
             if (request.getDiagnosisReport() == null || request.getDiagnosisReport().trim().isEmpty()) {
                 log.warn("Diagnosis report is empty, scheduleId: {}", request.getScheduleId());
                 response.setCode(ToBCodeEnum.FAIL);
@@ -277,7 +280,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 return response;
             }
             
-            // 2. 业务级权限验证: 只能取消自己的日程
+            // 2. 只能取消自己的日程
             if (!schedule.getDoctorId().equals(doctorId)) {
                 log.warn("Permission denied: doctor {} tried to cancel schedule {} owned by doctor {}", 
                         doctorId, scheduleId, schedule.getDoctorId());
@@ -286,7 +289,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 return response;
             }
             
-            // 3. 业务规则验证: 只能取消待处理或进行中的日程
+            // 3. 只能取消待处理或进行中的日程
             if (ScheduleStatus.COMPLETED.getCode().equals(schedule.getStatus())) {
                 log.warn("Cannot cancel completed schedule, scheduleId: {}", scheduleId);
                 response.setCode(ToBCodeEnum.FAIL);
@@ -312,7 +315,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
             // 5. 更新日程状态
             LambdaUpdateWrapper<DoctorSchedule> wrapper = new LambdaUpdateWrapper<>();
             wrapper.eq(DoctorSchedule::getId, scheduleId)
-                   .eq(DoctorSchedule::getVersion, schedule.getVersion())  // 乐观锁
+                   .eq(DoctorSchedule::getVersion, schedule.getVersion())
                    .set(DoctorSchedule::getStatus, ScheduleStatus.CANCELLED.getCode())
                    .set(DoctorSchedule::getResult, "取消原因: " + reason)
                    .set(DoctorSchedule::getUpdateTime, new Date());
@@ -455,38 +458,6 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
         }
     }
     
-    @Override
-    public GetDoctorInfoResponse getDoctorInfo(Long doctorId) {
-        GetDoctorInfoResponse response = new GetDoctorInfoResponse();
-        
-        try {
-            Doctor doctor = doctorMapper.selectById(doctorId);
-            if (doctor == null) {
-                response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("医生不存在");
-                return response;
-            }
-            
-            DoctorVO vo = new DoctorVO();
-            BeanUtils.copyProperties(doctor, vo);
-            
-            // TODO: 从account-management获取用户基础信息
-            // 这里暂时不查询，后续对接account服务
-            
-            response.setCode(ToBCodeEnum.SUCCESS);
-            response.setMessage("查询成功");
-            response.setDoctor(vo);
-            
-            log.info("Get doctor info success, doctorId: {}", doctorId);
-        } catch (Exception e) {
-            log.error("Get doctor info error", e);
-            response.setCode(ToBCodeEnum.FAIL);
-            response.setMessage("查询医生信息异常: " + e.getMessage());
-        }
-        
-        return response;
-    }
-    
     /**
      * 转换为VO
      */
@@ -517,42 +488,27 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 vo.setScheduleCategoryName(category.getCategoryName());
             }
         }
-        
-        // TODO: 设置医生和患者姓名 (从account服务获取)
-        
+
+        DoctorVO doctorVO = doctorClient.getDoctorInfo(GetDoctorInfoRequest.builder()
+                        .userId(schedule.getDoctorId())
+                        .build());
+        PatientVO patientVO = doctorClient.getPatientInfo(GetPatientInfoRequest.builder()
+                        .userId(schedule.getPatientId())
+                        .build());
+        vo.setDoctorName(doctorVO.getUsername());
+        vo.setPatientName(patientVO.getUsername());
+
         return vo;
     }
     
     /**
      * 生成模拟日程 (后续替换为AI服务)
      */
-    private List<ScheduleVO> generateMockSchedules(GenerateScheduleRequest request) {
-        List<ScheduleVO> schedules = new ArrayList<>();
+    private List<DoctorSchedule> generateSchedules(GenerateScheduleRequest request) {
         
-        // 模拟3个推荐日程
-        schedules.add(createMockSchedule(request, "门诊", "早上门诊时间", SchedulePriority.MEDIUM));
-        schedules.add(createMockSchedule(request, "查房", "下午查房", SchedulePriority.HIGH));
-        schedules.add(createMockSchedule(request, "会诊", "疑难病例会诊", SchedulePriority.HIGH));
-        
-        return schedules;
+        return new ArrayList<DoctorSchedule>();
     }
-    
-    private ScheduleVO createMockSchedule(GenerateScheduleRequest request, 
-                                          String categoryName, 
-                                          String content, 
-                                          SchedulePriority priority) {
-        ScheduleVO vo = new ScheduleVO();
-        vo.setDoctorId(request.getDoctorId());
-        vo.setSchedule(content);
-        vo.setScheduleCategoryName(categoryName);
-        vo.setScheduleDay(request.getScheduleDay());
-        vo.setPriority(priority.getCode());
-        vo.setPriorityDesc(priority.getDescription());
-        vo.setStatus(ScheduleStatus.PENDING.getCode());
-        vo.setStatusDesc(ScheduleStatus.PENDING.getDescription());
-        return vo;
-    }
-    
+
     /**
      * 构建诊断结果
      */

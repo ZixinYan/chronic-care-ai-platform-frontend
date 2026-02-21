@@ -2,7 +2,6 @@ package com.zixin.doctorconsumer.controller;
 
 import com.zixin.doctorapi.api.DoctorWorkbenchAPI;
 import com.zixin.doctorapi.dto.*;
-import com.zixin.doctorapi.vo.DoctorVO;
 import com.zixin.doctorapi.vo.ScheduleVO;
 import com.zixin.utils.exception.ToBCodeEnum;
 import com.zixin.utils.security.RequirePermission;
@@ -39,7 +38,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/doctor/workbench")
 @Slf4j
-@RequireRole("DOCTOR")  // 类级别权限: 只有DOCTOR角色可以访问
 public class DoctorWorkbenchController {
     
     @DubboReference(check = false)
@@ -47,28 +45,19 @@ public class DoctorWorkbenchController {
     
     /**
      * AI生成日程建议
-     * 
      * 医生登录后，AI根据后台数据生成日程表建议
-     * 
-     * 权限要求:
-     * - 角色: DOCTOR
-     * - 权限: doctor:write (医生写权限)
-     * 
      * 安全策略:
      * - 从X-User-Id Header获取医生ID,不使用请求参数中的doctorId
      * - 防止医生为其他医生生成日程
-     *
      * @param request 生成日程请求
      * @param userId 从Gateway注入的用户ID (医生ID)
      * @return AI推荐的日程列表
      */
     @PostMapping("/schedule/generate")
-    @RequirePermission("doctor:write")
+    @RequireRole("DOCTOR")
     public Result<GenerateScheduleResponse> generateSchedule(
             @RequestBody GenerateScheduleRequest request,
             @RequestHeader("X-User-Id") Long userId) {
-        
-        // 使用JWT中的userId,不信任请求参数
         request.setDoctorId(userId);
         
         log.info("Generate schedule request, doctorId: {}, date: {}", 
@@ -264,39 +253,6 @@ public class DoctorWorkbenchController {
         
         if (response.getCode() == ToBCodeEnum.SUCCESS) {
             return Result.success(true);
-        } else {
-            return Result.error(response.getMessage());
-        }
-    }
-    
-    /**
-     * 获取医生信息
-     * 
-     * 权限要求:
-     * - 角色: DOCTOR
-     * - 权限: doctor:read (医生读权限)
-     * 
-     * 业务规则:
-     * - 医生可以查看自己的详细信息
-     * - 返回医生的基础信息、科室、职称、工作经验等
-     * 
-     * 安全策略:
-     * - 从X-User-Id Header获取医生ID
-     * - 查询当前登录医生的信息
-     *
-     * @param userId 从Gateway注入的用户ID (医生ID)
-     * @return 医生信息
-     */
-    @GetMapping("/info")
-    @RequirePermission("doctor:read")
-    public Result<DoctorVO> getDoctorInfo(@RequestHeader("X-User-Id") Long userId) {
-        log.info("Get doctor info, doctorId: {}", userId);
-        
-        // 查询当前登录医生的信息
-        GetDoctorInfoResponse response = workbenchAPI.getDoctorInfo(userId);
-        
-        if (response.getCode() == ToBCodeEnum.SUCCESS) {
-            return Result.success(response.getDoctor());
         } else {
             return Result.error(response.getMessage());
         }

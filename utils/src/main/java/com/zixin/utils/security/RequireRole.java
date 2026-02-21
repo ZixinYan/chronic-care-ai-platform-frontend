@@ -9,8 +9,6 @@ import java.lang.annotation.*;
  * 使用示例:
  * @RequireRole("ADMIN")
  * @RequireRole(value = {"ADMIN", "MANAGER"}, logical = Logical.OR)
- * 
- * 注意: 使用此注解需要配合AOP切面实现角色校验逻辑
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

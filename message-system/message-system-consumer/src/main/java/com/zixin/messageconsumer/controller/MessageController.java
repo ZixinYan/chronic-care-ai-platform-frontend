@@ -3,6 +3,7 @@ package com.zixin.messageconsumer.controller;
 import com.zixin.messageapi.api.MessageAPI;
 import com.zixin.messageapi.dto.*;
 import com.zixin.messageapi.vo.MessageVO;
+import com.zixin.utils.exception.ToBCodeEnum;
 import com.zixin.utils.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -44,7 +45,7 @@ public class MessageController {
         log.info("Query inbox request, userId: {}", userId);
         QueryMessageResponse response = messageAPI.queryInbox(userId, request);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response);
         } else {
             return Result.error(response.getMessage());
@@ -64,7 +65,7 @@ public class MessageController {
         log.info("Query sent box request, userId: {}", userId);
         QueryMessageResponse response = messageAPI.querySentBox(userId, request);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response);
         } else {
             return Result.error(response.getMessage());
@@ -84,7 +85,7 @@ public class MessageController {
         log.info("Get message detail request, messageId: {}, userId: {}", messageId, userId);
         GetMessageDetailResponse response = messageAPI.getMessageDetail(userId, messageId);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response.getMessage());
         } else {
             return Result.error(response.getMessage());
@@ -104,7 +105,7 @@ public class MessageController {
         log.info("Mark as read request, messageId: {}, userId: {}", messageId, userId);
         MarkAsReadResponse response = messageAPI.markAsRead(userId, messageId);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response.getSuccess());
         } else {
             return Result.error(response.getMessage());
@@ -124,7 +125,7 @@ public class MessageController {
         log.info("Batch mark as read request, userId: {}, count: {}", userId, messageIds.size());
         MarkAsReadResponse response = messageAPI.batchMarkAsRead(userId, messageIds);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response.getSuccess());
         } else {
             return Result.error(response.getMessage());
@@ -144,7 +145,7 @@ public class MessageController {
         log.info("Delete message request, messageId: {}, userId: {}", messageId, userId);
         DeleteMessageResponse response = messageAPI.deleteMessage(userId, messageId);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response.getSuccess());
         } else {
             return Result.error(response.getMessage());
@@ -164,7 +165,7 @@ public class MessageController {
         log.info("Batch delete message request, userId: {}, count: {}", userId, messageIds.size());
         DeleteMessageResponse response = messageAPI.batchDeleteMessage(userId, messageIds);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response.getSuccess());
         } else {
             return Result.error(response.getMessage());
@@ -182,7 +183,7 @@ public class MessageController {
         log.info("Get unread count request, userId: {}", userId);
         UnreadCountResponse response = messageAPI.getUnreadCount(userId);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response.getUnreadCount());
         } else {
             return Result.error(response.getMessage());

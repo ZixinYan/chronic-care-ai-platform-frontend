@@ -73,8 +73,8 @@ public class MessageServiceImpl implements MessageAPI {
             message.setContent(request.getContent());
             message.setStatus(MessageStatus.UNREAD.getCode());
             message.setIsBroadcast(0);
-            message.setCreateTime(new Date());
-            message.setUpdateTime(new Date());
+            message.setCreateTime(System.currentTimeMillis());
+            message.setUpdateTime(System.currentTimeMillis());
             
             // 插入数据库
             int rows = messageMapper.insert(message);
@@ -131,8 +131,8 @@ public class MessageServiceImpl implements MessageAPI {
             message.setContent(request.getContent());
             message.setStatus(MessageStatus.UNREAD.getCode());
             message.setIsBroadcast(1);
-            message.setCreateTime(new Date());
-            message.setUpdateTime(new Date());
+            message.setCreateTime(System.currentTimeMillis());
+            message.setUpdateTime(System.currentTimeMillis());
             
             // 插入消息
             int rows = messageMapper.insert(message);
@@ -149,8 +149,8 @@ public class MessageServiceImpl implements MessageAPI {
                         recipient.setMessageId(message.getMessageId());
                         recipient.setReceiverId(receiverId);
                         recipient.setStatus(MessageStatus.UNREAD.getCode());
-                        recipient.setCreateTime(new Date());
-                        recipient.setUpdateTime(new Date());
+                        recipient.setCreateTime(System.currentTimeMillis());
+                        recipient.setUpdateTime(System.currentTimeMillis());
                         return recipient;
                     })
                     .collect(Collectors.toList());
@@ -344,7 +344,7 @@ public class MessageServiceImpl implements MessageAPI {
                 wrapper.eq(MessageRecipient::getMessageId, messageId)
                        .eq(MessageRecipient::getReceiverId, userId)
                        .set(MessageRecipient::getStatus, MessageStatus.READ.getCode())
-                       .set(MessageRecipient::getReadTime, new Date());
+                       .set(MessageRecipient::getReadTime, System.currentTimeMillis());
                 int rows = messageRecipientMapper.update(null, wrapper);
                 response.setSuccess(rows > 0);
             } else {
@@ -356,7 +356,7 @@ public class MessageServiceImpl implements MessageAPI {
                 }
                 
                 message.setStatus(MessageStatus.READ.getCode());
-                message.setReadTime(new Date());
+                message.setReadTime(System.currentTimeMillis());
                 int rows = messageMapper.updateById(message);
                 log.info("Mark as read success, messageId: {}, userId: {}", messageId, userId);
                 response.setSuccess(rows > 0);
@@ -429,7 +429,7 @@ public class MessageServiceImpl implements MessageAPI {
             }
             
             // 检查是否在撤回时间限制内
-            long timeDiff = System.currentTimeMillis() - message.getCreateTime().getTime();
+            long timeDiff = System.currentTimeMillis() - message.getCreateTime();
             if (timeDiff > REVOKE_TIME_LIMIT) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("消息发送超过5分钟，无法撤回");
@@ -438,7 +438,7 @@ public class MessageServiceImpl implements MessageAPI {
             
             // 更新消息状态
             message.setStatus(MessageStatus.REVOKED.getCode());
-            message.setRevokeTime(new Date());
+            message.setRevokeTime(System.currentTimeMillis());
             int rows = messageMapper.updateById(message);
             
             log.info("Revoke message success, messageId: {}, userId: {}", messageId, userId);
@@ -601,8 +601,8 @@ public class MessageServiceImpl implements MessageAPI {
             message.setContent(request.getContent());
             message.setStatus(MessageStatus.UNREAD.getCode());
             message.setIsBroadcast(0);
-            message.setCreateTime(new Date());
-            message.setUpdateTime(new Date());
+            message.setCreateTime(System.currentTimeMillis());
+            message.setUpdateTime(System.currentTimeMillis());
             
             // 插入数据库
             int rows = messageMapper.insert(message);
@@ -658,8 +658,8 @@ public class MessageServiceImpl implements MessageAPI {
             message.setContent(request.getContent());
             message.setStatus(MessageStatus.UNREAD.getCode());
             message.setIsBroadcast(1);
-            message.setCreateTime(new Date());
-            message.setUpdateTime(new Date());
+            message.setCreateTime(System.currentTimeMillis());
+            message.setUpdateTime(System.currentTimeMillis());
             
             // 插入消息
             int rows = messageMapper.insert(message);
@@ -676,8 +676,8 @@ public class MessageServiceImpl implements MessageAPI {
                         recipient.setMessageId(message.getMessageId());
                         recipient.setReceiverId(receiverId);
                         recipient.setStatus(MessageStatus.UNREAD.getCode());
-                        recipient.setCreateTime(new Date());
-                        recipient.setUpdateTime(new Date());
+                        recipient.setCreateTime(System.currentTimeMillis());
+                        recipient.setUpdateTime(System.currentTimeMillis());
                         return recipient;
                     })
                     .collect(Collectors.toList());

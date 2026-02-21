@@ -2,9 +2,11 @@ package com.zixin.accountapi.po;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.zixin.utils.security.SensitiveDataEncryptHandler;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -18,7 +20,8 @@ import java.util.Date;
  */
 @Data
 @TableName("care_platform_doctor")
-public class Doctor {
+public class Doctor implements Serializable {
+    private final static long serialVersionUID = 1L;
     
     /**
      * 医生ID (主键)
@@ -29,7 +32,7 @@ public class Doctor {
     /**
      * 账户ID (关联account表的accountId)
      */
-    private Long accountId;
+    private Long userId;
     
     /**
      * 科室
@@ -90,5 +93,5 @@ public class Doctor {
      * 扩展字段 (JSON格式)
      * 可以存储: 擅长领域、出诊时间、联系方式等
      */
-    private JSON ext;
+    private String ext;
 }

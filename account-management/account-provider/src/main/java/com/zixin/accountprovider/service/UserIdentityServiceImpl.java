@@ -47,9 +47,9 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             Doctor doctor = null;
             if (request.getDoctorId() != null) {
                 doctor = doctorMapper.selectById(request.getDoctorId());
-            } else if (request.getAccountId() != null) {
+            } else if (request.getUserId() != null) {
                 LambdaQueryWrapper<Doctor> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(Doctor::getAccountId, request.getAccountId());
+                wrapper.eq(Doctor::getUserId, request.getUserId());
                 doctor = doctorMapper.selectOne(wrapper);
             }
             
@@ -60,7 +60,7 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             }
             
             // 查询账户信息
-            User user = userMapper.selectById(doctor.getAccountId());
+            User user = userMapper.selectById(doctor.getUserId());
             if (user == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("关联账户不存在");
@@ -72,13 +72,13 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             BeanUtils.copyProperties(doctor, vo);
             BeanUtils.copyProperties(user, vo);
             vo.setUsername(user.getUsername());
-            
+
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("查询成功");
             response.setDoctor(vo);
             
-            log.info("Get doctor info success, doctorId: {}, accountId: {}", 
-                    doctor.getId(), doctor.getAccountId());
+            log.info("Get doctor info success, doctorId: {}, userId: {}", 
+                    doctor.getId(), doctor.getUserId());
         } catch (Exception e) {
             log.error("Get doctor info error", e);
             response.setCode(ToBCodeEnum.FAIL);
@@ -89,10 +89,11 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
     }
     
     @Override
-    public GetDoctorInfoResponse getDoctorInfoByAccountId(Long accountId) {
-        GetDoctorInfoRequest request = new GetDoctorInfoRequest();
-        request.setAccountId(accountId);
-        return getDoctorInfo(request);
+    public GetDoctorInfoResponse getDoctorInfoByUserId(Long userId) {
+        return getDoctorInfo(GetDoctorInfoRequest
+                .builder()
+                .userId(userId)
+                .build());
     }
     
     @Override
@@ -104,9 +105,9 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             Patient patient = null;
             if (request.getPatientId() != null) {
                 patient = patientMapper.selectById(request.getPatientId());
-            } else if (request.getAccountId() != null) {
+            } else if (request.getUserId() != null) {
                 LambdaQueryWrapper<Patient> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(Patient::getAccountId, request.getAccountId());
+                wrapper.eq(Patient::getUserId, request.getUserId());
                 patient = patientMapper.selectOne(wrapper);
             }
             
@@ -117,7 +118,7 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             }
             
             // 查询账户信息
-            User user = userMapper.selectById(patient.getAccountId());
+            User user = userMapper.selectById(patient.getUserId());
             if (user == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("关联账户不存在");
@@ -134,8 +135,8 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             response.setMessage("查询成功");
             response.setPatient(vo);
             
-            log.info("Get patient info success, patientId: {}, accountId: {}", 
-                    patient.getId(), patient.getAccountId());
+            log.info("Get patient info success, patientId: {}, userId: {}", 
+                    patient.getId(), patient.getUserId());
         } catch (Exception e) {
             log.error("Get patient info error", e);
             response.setCode(ToBCodeEnum.FAIL);
@@ -146,9 +147,10 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
     }
     
     @Override
-    public GetPatientInfoResponse getPatientInfoByAccountId(Long accountId) {
-        GetPatientInfoRequest request = new GetPatientInfoRequest();
-        request.setAccountId(accountId);
-        return getPatientInfo(request);
+    public GetPatientInfoResponse getPatientInfoByUserId(Long userId) {
+        return getPatientInfo(GetPatientInfoRequest
+                .builder()
+                .userId(userId)
+                .build());
     }
 }

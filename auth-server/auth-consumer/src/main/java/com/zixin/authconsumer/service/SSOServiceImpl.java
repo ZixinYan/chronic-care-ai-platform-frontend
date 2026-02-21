@@ -73,7 +73,8 @@ public class SSOServiceImpl implements LoginWithPhoneAPI {
             GenTokenRequest genTokenRequest = new GenTokenRequest();
             genTokenRequest.setUserId(userId);
             genTokenRequest.setUsername(username);
-            genTokenRequest.setRoles(roleNames);  // 使用转换后的角色名称
+            genTokenRequest.setRoles(roleNames);
+            genTokenRequest.setPermissions(permissions);
 
             GenTokenResponse tokenResponse = authClient.generateToken(genTokenRequest);
             if (tokenResponse.getCode() != ToBCodeEnum.SUCCESS) {

@@ -47,7 +47,7 @@
         "visibility": "public",
         "parameters": [
           {
-            "name": "accountId",
+            "name": "userId",
             "param_type": "Long",
             "is_optional": false,
             "description": "账户ID"
@@ -77,7 +77,7 @@
         "visibility": "public",
         "parameters": [
           {
-            "name": "accountId",
+            "name": "userId",
             "param_type": "Long",
             "is_optional": false,
             "description": "账户ID"

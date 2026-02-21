@@ -20,12 +20,12 @@ import org.springframework.web.cors.reactive.CorsUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
+import reactor.util.context.Context;
 import java.util.*;
 
 /**
  * 网关JWT认证和链路追踪全局过滤器
- * 
+ *
  * 功能：
  * 1. 生成/传递 TraceId
  * 2. 验证JWT Token (通过Dubbo调用auth-server)
@@ -46,7 +46,7 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
     private static final String USERNAME = "X-Username";
     private static final String USER_ROLES = "X-User-Roles";
     private static final String USER_AUTHORITIES = "X-User-Authorities";
-    
+
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @PostConstruct
@@ -72,40 +72,37 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        
+
         // 1. 生成/获取 TraceId
         String traceId = generateOrGetTraceId(exchange);
-        String finalTraceId = traceId;
-        
+
         // 1.1 预检请求直接放行
         if (CorsUtils.isPreFlightRequest(exchange.getRequest())) {
-            return continueWithTraceId(exchange, chain, finalTraceId);
+            return continueWithTraceId(exchange, chain, traceId);
         }
 
         // 2. 检查是否是白名单路径
         String path = exchange.getRequest().getPath().value();
         if (isWhiteListPath(path)) {
             log.info("White list path: {}, skip JWT authentication", path);
-            return continueWithTraceId(exchange, chain, finalTraceId);
+            return continueWithTraceId(exchange, chain, traceId);
         }
-        log.info("request path: {}, requires JWT authentication", path);
+
         // 3. 提取JWT Token
         String token = extractToken(exchange);
         if (token == null) {
             log.warn("Missing JWT token for path: {}", path);
-            return unauthorized(exchange, finalTraceId, "Missing authentication token");
+            return unauthorized(exchange, traceId, "Missing authentication token");
         }
-        
+
         // 4. 通过Dubbo调用auth-server验证Token
         return validateTokenAsync(token)
                 .flatMap(response -> {
-                    // 验证失败
                     if (response == null || !Boolean.TRUE.equals(response.getValid())) {
                         log.warn("JWT validation failed for path: {}", path);
-                        return unauthorized(exchange, finalTraceId, "Invalid or expired token");
+                        return unauthorized(exchange, traceId, "Invalid or expired token");
                     }
-                    
-                    // 验证成功，提取用户信息
+
                     Long userId = response.getUserId();
                     String username = response.getUsername();
                     List<String> roles = response.getRoles();
@@ -113,16 +110,17 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
 
                     if (userId == null) {
                         log.warn("JWT validation response missing userId, path: {}", path);
-                        return unauthorized(exchange, finalTraceId, "Invalid token payload");
+                        return unauthorized(exchange, traceId, "Invalid token payload");
                     }
-                    
-                    log.debug("JWT validated successfully - userId: {}, username: {}, roles: {}", userId, username, roles);
-                    
+
+                    log.info("JWT validated successfully - userId: {}, username: {}, roles: {}, permission:{}",
+                            userId, username, roles, authorities);
+
                     // 5. 将用户完整信息注入到下游请求头
                     ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate()
-                            .header(TRACE_ID, finalTraceId)
+                            .header(TRACE_ID, traceId)
                             .header(USER_ID, userId == null ? "" : String.valueOf(userId));
-                    
+
                     if (username != null) {
                         requestBuilder.header(USERNAME, username);
                     }
@@ -132,35 +130,60 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
                     if (authorities != null && !authorities.isEmpty()) {
                         requestBuilder.header(USER_AUTHORITIES, String.join(",", authorities));
                     }
-                    
+
                     ServerHttpRequest modifiedRequest = requestBuilder.build();
-                    
+
                     ServerWebExchange mutatedExchange = exchange.mutate()
                             .request(modifiedRequest)
                             .build();
-                    
-                    // 6. 设置MDC和Reactor Context
+
+                    // 6. 构建包含所有用户信息的上下文
+                    Context initialContext = Context.empty()
+                            .put(TRACE_ID, traceId)
+                            .put(USER_ID, userId)
+                            .put(USERNAME, username != null ? username : "")
+                            .put(USER_ROLES, roles != null ? roles : Collections.emptyList())
+                            .put(USER_AUTHORITIES, authorities != null ? authorities : Collections.emptyList());
+
+                    // 7. 在进入过滤链之前设置MDC
+                    MDC.put(TRACE_ID, traceId);
+
                     return chain.filter(mutatedExchange)
-                            .contextWrite(ctx -> ctx
-                                    .put(TRACE_ID, finalTraceId)
-                                    .put(USER_ID, userId)
-                                    .put(USER_ROLES, roles)
-                                    .put(USER_AUTHORITIES, authorities))
-                            .doOnEach(signal -> {
-                                if (!signal.isOnComplete()) {
-                                    MDC.put(TRACE_ID, finalTraceId);
-                                    MDC.put(USER_ID, String.valueOf(userId));
-                                }
-                            })
+                            .contextWrite(ctx -> ctx.putAll(initialContext))  // 合并所有上下文
                             .doFinally(signal -> {
+                                // 清理MDC
                                 MDC.remove(TRACE_ID);
-                                MDC.remove(USER_ID);
                             });
                 })
                 .onErrorResume(e -> {
                     log.error("Error during JWT validation", e);
-                    return unauthorized(exchange, finalTraceId, "Authentication failed");
+                    return unauthorized(exchange, traceId, "Authentication failed");
                 });
+    }
+
+    /**
+     * 白名单路径继续执行，只添加TraceId
+     */
+    private Mono<Void> continueWithTraceId(ServerWebExchange exchange, GatewayFilterChain chain, String traceId) {
+        // 添加模拟用户信息
+        ServerHttpRequest modifiedRequest = exchange.getRequest()
+                .mutate()
+                .header(TRACE_ID, traceId)
+                .build();
+
+        ServerWebExchange mutatedExchange = exchange.mutate()
+                .request(modifiedRequest)
+                .build();
+
+        // 设置MDC用于日志
+        MDC.put(TRACE_ID, traceId);
+
+        // 创建包含traceId的上下文
+        Context context = Context.empty().put(TRACE_ID, traceId);
+
+        return chain.filter(mutatedExchange)
+                .contextWrite(ctx -> ctx.putAll(context))
+                .doFinally(signal -> MDC.remove(TRACE_ID));
     }
 
     /**
@@ -219,30 +242,6 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
                     return Mono.just(fallback);
                 });
 
-    }
-
-    /**
-     * 白名单路径继续执行，只添加TraceId
-     */
-    private Mono<Void> continueWithTraceId(ServerWebExchange exchange, GatewayFilterChain chain, String traceId) {
-        // 添加模拟用户信息
-        ServerHttpRequest modifiedRequest = exchange.getRequest()
-                .mutate()
-                .header(TRACE_ID, traceId)
-                .build();
-        
-        ServerWebExchange mutatedExchange = exchange.mutate()
-                .request(modifiedRequest)
-                .build();
-        
-        return chain.filter(mutatedExchange)
-                .contextWrite(ctx -> ctx.put(TRACE_ID, traceId))
-                .doOnEach(signal -> {
-                    if (!signal.isOnComplete()) {
-                        MDC.put(TRACE_ID, traceId);
-                    }
-                })
-                .doFinally(signal -> MDC.remove(TRACE_ID));
     }
 
     /**

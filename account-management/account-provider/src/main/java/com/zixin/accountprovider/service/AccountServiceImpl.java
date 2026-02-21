@@ -10,13 +10,10 @@ import com.zixin.accountapi.api.AccountManagementAPI;
 import com.zixin.accountapi.dto.*;
 import com.zixin.accountapi.enums.Action;
 import com.zixin.accountapi.enums.RoleCode;
-import com.zixin.accountapi.po.User;
-import com.zixin.accountapi.po.UserRole;
-import com.zixin.accountapi.po.RolePermission;
+import com.zixin.accountapi.po.*;
+import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountprovider.config.RoleConfig;
-import com.zixin.accountprovider.mapper.UserMapper;
-import com.zixin.accountprovider.mapper.UserRoleMapper;
-import com.zixin.accountprovider.mapper.RolePermissionMapper;
+import com.zixin.accountprovider.mapper.*;
 import com.zixin.accountprovider.utils.AccountUtils;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +39,9 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
     private final RolePermissionMapper rolePermissionMapper;
     private final RoleConfig roleConfig;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final DoctorMapper doctorMapper;
+    private final PatientMapper patientMapper;
+    private final UserIdentityServiceImpl userIdentityService;
 
     // Password complexity regex
     private static final Pattern PASSWORD_PATTERN =
@@ -58,11 +58,14 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
     public AccountServiceImpl(UserRoleMapper userRoleMapper,
                               RolePermissionMapper rolePermissionMapper,
                               RoleConfig roleConfig,
-                              BCryptPasswordEncoder bCryptPasswordEncoder) {
+                              BCryptPasswordEncoder bCryptPasswordEncoder, DoctorMapper doctorMapper, PatientMapper patientMapper, UserIdentityServiceImpl userIdentityService) {
         this.userRoleMapper = userRoleMapper;
         this.rolePermissionMapper = rolePermissionMapper;
         this.roleConfig = roleConfig;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.doctorMapper = doctorMapper;
+        this.patientMapper = patientMapper;
+        this.userIdentityService = userIdentityService;
     }
 
     @Override
@@ -157,6 +160,26 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
             // 5. Assign roles (batch insert)
             assignRolesToUser(user.getUserId(), registerRequest.getRoleCodes());
 
+            // 6. set Doctor information
+            Long userId = this.baseMapper.selectOne(new LambdaQueryWrapper<User>()
+                    .eq(User::getUsername, registerRequest.getUsername())
+                    .last("LIMIT 1"))
+                    .getUserId();
+            if(registerRequest.getRoleCodes().contains(RoleCode.DOCTOR.getCode())){
+                registerRequest.getDoctor().setUserId(userId);
+                doctorMapper.insert(BeanUtil.copyProperties(registerRequest.getDoctor(), Doctor.class));
+                log.info("Doctor info inserted for userId: {}, doctor information: {}", user.getUserId(), registerRequest.getDoctor());
+            }
+            // 7. set Patient information
+            if (registerRequest.getRoleCodes().contains(RoleCode.PATIENT.getCode())){
+                registerRequest.getPatient().setUserId(userId);
+                if (checkPatientInfo(registerRequest.getPatient())){
+                    throw new BusinessException("患者信息不合法");
+                }
+                patientMapper.insert(BeanUtil.copyProperties(registerRequest.getPatient(), Patient.class));
+                log.info("Patient info inserted for userId: {}, patient information: {}", user.getUserId(), registerRequest.getPatient());
+            }
+
             log.info("User registered successfully - userId: {}, username: {}",
                     user.getUserId(), user.getUsername());
 
@@ -179,6 +202,7 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
 
         return registerResponse;
     }
+
 
     @Override
     public GetUserInfoResponse getUserInfo(GetUserInfoRequest request) {
@@ -235,9 +259,9 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
             }
 
             // Safely get account_id
-            Long accountId;
+            Long userId;
             try {
-                accountId = Long.valueOf(updateData.get("account_id").toString());
+                userId = Long.valueOf(updateData.get("account_id").toString());
             } catch (NumberFormatException e) {
                 log.warn("Update failed - invalid account_id format: {}", updateData.get("account_id"));
                 response.setCode(ToBCodeEnum.FAIL);
@@ -254,9 +278,9 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
             }
 
             // Check if user exists
-            User user = this.baseMapper.selectById(accountId);
+            User user = this.baseMapper.selectById(userId);
             if (user == null) {
-                log.warn("Update failed - user not found: {}", accountId);
+                log.warn("Update failed - user not found: {}", userId);
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("User not found");
                 return response;
@@ -264,7 +288,7 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
 
             // Build update condition
             UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
-            updateWrapper.eq("user_id", accountId);
+            updateWrapper.eq("user_id", userId);
 
             updateData.forEach((key, value) -> {
                 if (value != null && !"account_id".equals(key)) {
@@ -286,13 +310,13 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
             // Execute update
             boolean success = update(updateWrapper);
             if (!success) {
-                log.warn("Update failed for user: {}", accountId);
+                log.warn("Update failed for user: {}", userId);
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("Update failed");
                 return response;
             }
 
-            log.info("User info updated successfully - userId: {}", accountId);
+            log.info("User info updated successfully - userId: {}", userId);
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("Update successful");
 
@@ -413,10 +437,10 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
         UpdateUserRolesResponse response = new UpdateUserRolesResponse();
 
         try {
-            Long accountId = request.getUserId();
+            Long userId = request.getUserId();
             List<Integer> newRoleCodes = request.getRoleCodes();
 
-            if (accountId == null) {
+            if (userId == null) {
                 log.warn("Update roles failed - account ID is null");
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("Account ID is required");
@@ -424,30 +448,30 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
             }
 
             if (newRoleCodes == null || newRoleCodes.isEmpty()) {
-                log.warn("Update roles failed - role list is empty for account: {}", accountId);
+                log.warn("Update roles failed - role list is empty for account: {}", userId);
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("Role list cannot be empty");
                 return response;
             }
 
             // Verify account exists
-            User user = this.baseMapper.selectById(accountId);
+            User user = this.baseMapper.selectById(userId);
             if (user == null) {
-                log.warn("Update roles failed - account not found: {}", accountId);
+                log.warn("Update roles failed - account not found: {}", userId);
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("Account not found");
                 return response;
             }
 
             // Delete all existing roles
-            userRoleMapper.deleteByUserId(accountId);
+            userRoleMapper.deleteByUserId(userId);
 
             // Insert new roles (batch insert)
             if (!newRoleCodes.isEmpty()) {
                 List<UserRole> userRoles = newRoleCodes.stream()
                         .map(roleCode -> {
                             UserRole userRole = new UserRole();
-                            userRole.setUserId(accountId);
+                            userRole.setUserId(userId);
                             userRole.setRoleCode(roleCode);
                             userRole.setCreateTime(System.currentTimeMillis());
                             return userRole;
@@ -457,15 +481,15 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
                 userRoleMapper.batchInsert(userRoles);
             }
 
-            log.info("User roles updated successfully - accountId: {}, new roles: {}",
-                    accountId, newRoleCodes);
+            log.info("User roles updated successfully - userId: {}, new roles: {}",
+                    userId, newRoleCodes);
 
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("Roles updated successfully");
             response.setRoleCodes(newRoleCodes);
 
         } catch (Exception e) {
-            log.error("Failed to update user roles for accountId: {}", request.getUserId(), e);
+            log.error("Failed to update user roles for userId: {}", request.getUserId(), e);
             response.setCode(ToBCodeEnum.FAIL);
             response.setMessage("Failed to update roles: " + e.getMessage());
         }
@@ -498,7 +522,7 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
         }
 
         List<RolePermission> rolePermissions = rolePermissionMapper.selectByRoleCodes(roleCodes);
-
+        log.info("Fetched {} permissions for roles: {}", rolePermissions, roleCodes);
         return rolePermissions.stream()
                 .map(this::formatPermission)
                 .filter(Objects::nonNull)
@@ -704,4 +728,26 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
             super(message);
         }
     }
+
+    /**
+     * Check patient information validity
+     * @param patient
+     * @return
+     */
+    private boolean checkPatientInfo(Patient patient) {
+        if (patient == null) {
+            return true;
+        }
+        Long doctorId = patient.getAttendingDoctorId();
+        if (doctorId == null) {
+            return true;
+        }
+        // 1. Check if doctor exists
+        DoctorVO doctor = userIdentityService.getDoctorInfoByUserId(doctorId).getDoctor();
+        if (doctor == null) {
+            return true;
+        }
+        return false;
+    }
+
 }

@@ -15,7 +15,7 @@
         "GetDoctorInfoRequest"
       ]
     },
-    "detailed_description": "GetDoctorInfoRequest是一个标准的Java DTO(Data Transfer Object)类,位于account-api模块的dto包下,用于封装获取医生信息的请求参数。\n\n该类采用Lombok的@Data注解自动生成getter、setter、toString、equals和hashCode等方法,简化了样板代码的编写。类中定义了两个Long类型的属性:\n1. doctorId - 医生ID,用于直接通过医生唯一标识查询\n2. accountId - 账户ID,用于通过关联的账户ID查询医生信息\n\n从架构层面看,该类属于API层的DTO对象,用于定义服务间或前后端之间的数据契约。作为account-api模块的一部分,它可能被其他服务或客户端引用,用于调用获取医生信息的接口。\n\n该类设计简洁,遵循了DTO的设计原则,仅包含数据字段而不包含业务逻辑。两个查询条件的设计表明该接口支持灵活的查询方式,可以根据医生ID或账户ID进行查询。",
+    "detailed_description": "GetDoctorInfoRequest是一个标准的Java DTO(Data Transfer Object)类,位于account-api模块的dto包下,用于封装获取医生信息的请求参数。\n\n该类采用Lombok的@Data注解自动生成getter、setter、toString、equals和hashCode等方法,简化了样板代码的编写。类中定义了两个Long类型的属性:\n1. doctorId - 医生ID,用于直接通过医生唯一标识查询\n2. userId - 账户ID,用于通过关联的账户ID查询医生信息\n\n从架构层面看,该类属于API层的DTO对象,用于定义服务间或前后端之间的数据契约。作为account-api模块的一部分,它可能被其他服务或客户端引用,用于调用获取医生信息的接口。\n\n该类设计简洁,遵循了DTO的设计原则,仅包含数据字段而不包含业务逻辑。两个查询条件的设计表明该接口支持灵活的查询方式,可以根据医生ID或账户ID进行查询。",
     "responsibilities": [
       "定义获取医生信息接口的请求参数结构",
       "封装doctorId和accountId两个查询条件",

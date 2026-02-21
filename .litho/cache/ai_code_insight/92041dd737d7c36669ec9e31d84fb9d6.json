@@ -18,7 +18,7 @@
         "Patient"
       ]
     },
-    "detailed_description": "Patient.java 是账户管理模块中的患者信息持久化对象，采用 MyBatis-Plus 框架进行 ORM 映射。该类设计用于存储患者特有的医疗健康信息，作为 Account 表的扩展实体存在。\n\n## 核心设计特点：\n\n### 1. 实体关联设计\n- 通过 accountId 字段关联主账户表(account)，实现用户身份与患者医疗信息的分离\n- 通过 attendingDoctorId 关联医生表(doctor)，建立患者-医生的诊疗关系，用于健康报告权限控制\n\n### 2. 医疗数据建模\n- 包含完整的患者基础健康信息：病史摘要(medicalHistory)、过敏史(allergies)、血型(bloodType)\n- 包含体征数据：身高(height)、体重(weight)\n- 包含紧急联系信息：紧急联系人(emergencyContact)、紧急联系人电话(emergencyPhone)\n\n### 3. 数据安全机制\n- emergencyPhone 字段使用 SensitiveDataEncryptHandler 进行加密存储，保护敏感隐私数据\n- 采用逻辑删除(@TableLogic)机制，保证数据可追溯性\n- 使用乐观锁(@Version)防止并发更新冲突\n\n### 4. 扩展性设计\n- ext 字段采用 JSON 类型，支持存储既往病史详情、用药记录等动态扩展数据\n- 主键采用 ASSIGN_ID 策略，支持分布式ID生成\n\n### 5. 审计追踪\n- createTime 和 updateTime 字段支持数据变更时间追踪",
+    "detailed_description": "Patient.java 是账户管理模块中的患者信息持久化对象，采用 MyBatis-Plus 框架进行 ORM 映射。该类设计用于存储患者特有的医疗健康信息，作为 Account 表的扩展实体存在。\n\n## 核心设计特点：\n\n### 1. 实体关联设计\n- 通过 userId 字段关联主账户表(account)，实现用户身份与患者医疗信息的分离\n- 通过 attendingDoctorId 关联医生表(doctor)，建立患者-医生的诊疗关系，用于健康报告权限控制\n\n### 2. 医疗数据建模\n- 包含完整的患者基础健康信息：病史摘要(medicalHistory)、过敏史(allergies)、血型(bloodType)\n- 包含体征数据：身高(height)、体重(weight)\n- 包含紧急联系信息：紧急联系人(emergencyContact)、紧急联系人电话(emergencyPhone)\n\n### 3. 数据安全机制\n- emergencyPhone 字段使用 SensitiveDataEncryptHandler 进行加密存储，保护敏感隐私数据\n- 采用逻辑删除(@TableLogic)机制，保证数据可追溯性\n- 使用乐观锁(@Version)防止并发更新冲突\n\n### 4. 扩展性设计\n- ext 字段采用 JSON 类型，支持存储既往病史详情、用药记录等动态扩展数据\n- 主键采用 ASSIGN_ID 策略，支持分布式ID生成\n\n### 5. 审计追踪\n- createTime 和 updateTime 字段支持数据变更时间追踪",
     "responsibilities": [
       "定义患者医疗健康信息的数据结构，作为数据库 patient 表的 ORM 映射实体",
       "扩展 Account 账户信息，存储患者专属字段如病史、过敏史、血型等医疗数据",

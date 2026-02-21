@@ -68,6 +68,7 @@ public class TokenValidationServiceImpl implements TokenValidationAPI {
             // 4. 提取用户信息
             Long userId = Long.parseLong(jwt.getSubject());
             List<String> roles = jwt.getClaim("roles");
+            String username = jwt.getClaim("username");
             List<String> authorities = jwt.getClaim("authorities");
 
             // 5. 构造响应
@@ -76,6 +77,7 @@ public class TokenValidationServiceImpl implements TokenValidationAPI {
             response.setValid(true);
             response.setUserId(userId);
             response.setRoles(roles);
+            response.setUsername(username);
             response.setAuthorities(authorities);
 
             log.debug("Token validated successfully for userId: {}", userId);

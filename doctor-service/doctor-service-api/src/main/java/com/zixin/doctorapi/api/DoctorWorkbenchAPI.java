@@ -65,12 +65,4 @@ public interface DoctorWorkbenchAPI {
      * @return 更新结果
      */
     UpdateScheduleStatusResponse updateScheduleStatus(Long scheduleId, Long doctorId, String status);
-    
-    /**
-     * 获取医生信息
-     *
-     * @param doctorId 医生ID
-     * @return 医生信息
-     */
-    GetDoctorInfoResponse getDoctorInfo(Long doctorId);
 }
