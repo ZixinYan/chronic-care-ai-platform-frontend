@@ -1,9 +1,6 @@
 package com.zixin.accountapi.api;
 
-import com.zixin.accountapi.dto.GetDoctorInfoRequest;
-import com.zixin.accountapi.dto.GetDoctorInfoResponse;
-import com.zixin.accountapi.dto.GetPatientInfoRequest;
-import com.zixin.accountapi.dto.GetPatientInfoResponse;
+import com.zixin.accountapi.dto.*;
 
 /**
  * 用户身份信息服务API
@@ -48,4 +45,7 @@ public interface UserIdentityAPI {
      * @return 患者完整信息
      */
     GetPatientInfoResponse getPatientInfoByUserId(Long userId);
+
+
+    GetMyPatientsResponse getMyPatients(GetMyPatientsRequest request);
 }

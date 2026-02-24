@@ -65,4 +65,13 @@ public interface DoctorWorkbenchAPI {
      * @return 更新结果
      */
     UpdateScheduleStatusResponse updateScheduleStatus(Long scheduleId, Long doctorId, String status);
+
+    /**
+     * 添加新日程
+     * @param request
+     * @return
+     */
+    AddScheduleResponse addSchedule(AddScheduleRequest request);
+
+
 }

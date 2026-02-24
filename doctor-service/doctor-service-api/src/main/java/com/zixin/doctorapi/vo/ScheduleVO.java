@@ -22,7 +22,6 @@ public class ScheduleVO implements Serializable {
      * 日程内容
      */
     private String schedule;
-    
     /**
      * 日程类别ID
      */
@@ -62,4 +61,12 @@ public class ScheduleVO implements Serializable {
      * 执行结果
      */
     private String result;
+    /**
+     * 开始时间
+     */
+    private Long startTime;
+    /**
+     * 结束时间
+     */
+    private Long endTime;
 }

@@ -3,11 +3,6 @@ package com.zixin.healthcenterprovider.service;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zixin.accountapi.api.UserIdentityAPI;
-import com.zixin.accountapi.dto.GetDoctorInfoRequest;
-import com.zixin.accountapi.dto.GetDoctorInfoResponse;
-import com.zixin.accountapi.dto.GetPatientInfoRequest;
-import com.zixin.accountapi.dto.GetPatientInfoResponse;
 import com.zixin.accountapi.vo.PatientVO;
 import com.zixin.healthcenterapi.api.HealthReportAPI;
 import com.zixin.healthcenterapi.dto.*;
@@ -15,23 +10,25 @@ import com.zixin.healthcenterapi.enums.ReportStatus;
 import com.zixin.healthcenterapi.enums.ReportType;
 import com.zixin.healthcenterapi.po.HealthReport;
 import com.zixin.healthcenterapi.vo.HealthReportVO;
+import com.zixin.healthcenterprovider.client.MessageClient;
+import com.zixin.healthcenterprovider.client.OSSClient;
+import com.zixin.healthcenterprovider.client.UserIdentityClient;
 import com.zixin.healthcenterprovider.mapper.HealthReportMapper;
-import com.zixin.thirdpartyapi.api.OSSAPI;
-import com.zixin.thirdpartyapi.dto.OSSUploadFileRequest;
-import com.zixin.thirdpartyapi.dto.OSSUploadFileResponse;
+import com.zixin.messageapi.dto.SendMessageRequest;
+import com.zixin.messageapi.enums.MessageType;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 健康报告服务实现
@@ -49,15 +46,18 @@ import java.util.List;
 public class HealthReportServiceImpl implements HealthReportAPI {
     
     private final HealthReportMapper healthReportMapper;
+    private final MessageClient messageClient;
+    private final OSSClient ossClient;
+    private final UserIdentityClient userIdentityClient;
     
-    @DubboReference(check = false)
-    private OSSAPI ossAPI;
-    
-    @DubboReference(check = false)
-    private UserIdentityAPI userIdentityAPI;
-    
-    public HealthReportServiceImpl(HealthReportMapper healthReportMapper) {
+    public HealthReportServiceImpl(HealthReportMapper healthReportMapper, 
+                                   MessageClient messageClient,
+                                   OSSClient ossClient,
+                                   UserIdentityClient userIdentityClient) {
         this.healthReportMapper = healthReportMapper;
+        this.messageClient = messageClient;
+        this.ossClient = ossClient;
+        this.userIdentityClient = userIdentityClient;
     }
     
     @Override
@@ -94,20 +94,17 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             
             // 2. 获取患者信息(包含主治医生ID)
             sw.start("查询患者信息");
-            GetPatientInfoRequest patientRequest = new GetPatientInfoRequest();
-            patientRequest.setPatientId(request.getPatientId());
-            GetPatientInfoResponse patientResponse = userIdentityAPI.getPatientInfo(patientRequest);
+            PatientVO patient = userIdentityClient.getPatientInfo(request.getPatientId());
             
-            if (!"SUCCESS".equals(patientResponse.getCode().name())) {
+            if (patient == null) {
                 response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("患者信息查询失败: " + patientResponse.getMessage());
+                response.setMessage("患者信息查询失败");
                 return response;
             }
             
-            PatientVO patient = patientResponse.getPatient();
             sw.stop();
-            log.info("uploadReport - 患者信息查询成功, patientId: {}, patientName: {}, attendingDoctorId: {}", 
-                    patient.getId(), patient.getNickname(), patient.getAttendingDoctorId());
+            log.info("uploadReport - 患者信息查询成功, userId: {}, patientName: {}, attendingDoctorId: {}", 
+                    patient.getUserId(), patient.getNickname(), patient.getAttendingDoctorId());
             
             // 3. 处理文件上传(图片或PDF类型)
             String fileUrl = null;
@@ -121,18 +118,14 @@ public class HealthReportServiceImpl implements HealthReportAPI {
                 }
                 
                 // 调用OSS上传服务
-                OSSUploadFileRequest ossRequest = new OSSUploadFileRequest();
-                ossRequest.setFile(request.getFile());
+                fileUrl = ossClient.uploadFile(request.getFile());
                 
-                OSSUploadFileResponse ossResponse = ossAPI.uploadFile(ossRequest);
-                
-                if (!"SUCCESS".equals(ossResponse.getCode().name())) {
+                if (fileUrl == null || fileUrl.isEmpty()) {
                     response.setCode(ToBCodeEnum.FAIL);
-                    response.setMessage("文件上传失败: " + ossResponse.getMessage());
+                    response.setMessage("文件上传失败");
                     return response;
                 }
                 
-                fileUrl = ossResponse.getUrl();
                 sw.stop();
                 log.info("uploadReport - 文件上传成功, fileUrl: {}", fileUrl);
             }
@@ -158,11 +151,11 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             report.setFileUrl(fileUrl);
             report.setTextContent(request.getTextContent());
             
-            // 解析报告日期
+            // 解析报告日期(Unix毫秒时间戳)
             if (request.getReportDate() != null && !request.getReportDate().isEmpty()) {
                 try {
-                    Date reportDate = DateUtil.parseDate(request.getReportDate());
-                    report.setReportDate(reportDate.getTime());
+                    long reportDate = DateUtil.parseDate(request.getReportDate()).getTime();
+                    report.setReportDate(reportDate);
                 } catch (Exception e) {
                     log.warn("uploadReport - 报告日期解析失败, reportDate: {}", request.getReportDate());
                 }
@@ -177,15 +170,25 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             int rows = healthReportMapper.insert(report);
             sw.stop();
 
-            // 7. TODO 调用 Kafka 发送报告上传事件（异步处理后续审核等流程）
-            
-            if (rows > 0) {
+            // 7. 异步操作执行通知
+            if (rows > 0 && patient.getAttendingDoctorId() != null) {
+                // 发送站内信通知主治医生
+                messageClient.sendMessageAsync(
+                        patient.getUserId(),
+                        SendMessageRequest.builder()
+                                .receiverId(patient.getAttendingDoctorId())
+                                .messageType(MessageType.SYSTEM.getCode())
+                                .title("新健康报告上传通知")
+                                .content("患者 " + patient.getNickname() + " 上传了新的健康报告，请及时查看。")
+                                .build()
+                );
                 response.setCode(ToBCodeEnum.SUCCESS);
                 response.setMessage("报告上传成功");
                 response.setReportId(report.getReportId());
                 response.setFileUrl(fileUrl);
-                
-                log.info("uploadReport - 报告上传成功, reportId: {}, patientId: {}, 耗时统计: {}", 
+                // TODO 自动添加医生工作台
+
+                log.info("uploadReport - 报告上传成功, reportId: {}, patientId: {}, 耗时统计: {}",
                         report.getReportId(), request.getPatientId(), sw.prettyPrint());
             } else {
                 response.setCode(ToBCodeEnum.FAIL);
@@ -298,7 +301,7 @@ public class HealthReportServiceImpl implements HealthReportAPI {
 
             // 3. 权限校验: 只能查看自己的报告
             Long currentUserId = UserInfoManager.getUserIdOrThrow();
-            if (request.getReportId() != null && !report.getPatientId().equals(currentUserId)) {
+            if (!report.getPatientId().equals(currentUserId)) {
                 log.warn("getReportDetail - 权限拒绝: userId {} 尝试查看 patientId {} 的报告 {}", 
                         currentUserId, report.getPatientId(), request.getReportId());
                 response.setCode(ToBCodeEnum.FAIL);
@@ -345,32 +348,24 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             vo.setStatusDesc(status.getDescription());
         }
         
-        // 查询患者姓名
+        // 查询患者姓名(使用userId)
         if (report.getPatientId() != null) {
             try {
-                GetPatientInfoRequest patientRequest = new GetPatientInfoRequest();
-                patientRequest.setPatientId(report.getPatientId());
-                GetPatientInfoResponse patientResponse = userIdentityAPI.getPatientInfo(patientRequest);
-                
-                if (ToBCodeEnum.SUCCESS.equals(patientResponse.getCode()) 
-                        && patientResponse.getPatient() != null) {
-                    vo.setPatientName(patientResponse.getPatient().getNickname());
+                PatientVO patient = userIdentityClient.getPatientInfo(report.getPatientId());
+                if (patient != null) {
+                    vo.setPatientName(patient.getNickname());
                 }
             } catch (Exception e) {
                 log.warn("Failed to get patient name, patientId: {}", report.getPatientId(), e);
             }
         }
         
-        // 查询医生姓名
+        // 查询医生姓名(使用userId)
         if (report.getAttendingDoctorId() != null) {
             try {
-                GetDoctorInfoRequest doctorRequest = new GetDoctorInfoRequest();
-                doctorRequest.setDoctorId(report.getAttendingDoctorId());
-                GetDoctorInfoResponse doctorResponse = userIdentityAPI.getDoctorInfo(doctorRequest);
-                
-                if (ToBCodeEnum.SUCCESS.equals(doctorResponse.getCode()) 
-                        && doctorResponse.getDoctor() != null) {
-                    vo.setDoctorName(doctorResponse.getDoctor().getNickname());
+                com.zixin.accountapi.vo.DoctorVO doctor = userIdentityClient.getDoctorInfo(report.getAttendingDoctorId());
+                if (doctor != null) {
+                    vo.setDoctorName(doctor.getNickname());
                 }
             } catch (Exception e) {
                 log.warn("Failed to get doctor name, doctorId: {}", report.getAttendingDoctorId(), e);

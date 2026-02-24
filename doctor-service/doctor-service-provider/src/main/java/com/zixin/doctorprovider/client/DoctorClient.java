@@ -7,8 +7,11 @@ import com.zixin.accountapi.po.Doctor;
 import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountapi.vo.PatientVO;
 import com.zixin.utils.exception.ToBCodeEnum;
+import com.zixin.utils.utils.PageUtils;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class DoctorClient {
@@ -29,5 +32,14 @@ public class DoctorClient {
             throw new RuntimeException("Failed to get patient info: " + patientInfoResponse.getMessage());
         }
         return patientInfoResponse.getPatient();
+    }
+
+
+    public PageUtils getPatientsByDoctorId(GetMyPatientsRequest request) {
+        GetMyPatientsResponse response = userIdentityAPI.getMyPatients(request);
+        if (!response.getCode().equals(ToBCodeEnum.SUCCESS)) {
+            throw new RuntimeException("Failed to get patients for doctorId " + request.getDoctorId() + ": " + response.getMessage());
+        }
+        return response.getPatients();
     }
 }

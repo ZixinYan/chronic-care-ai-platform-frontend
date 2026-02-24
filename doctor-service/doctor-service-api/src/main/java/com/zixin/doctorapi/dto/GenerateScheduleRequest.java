@@ -26,4 +26,8 @@ public class GenerateScheduleRequest implements Serializable {
      * 科室 (可选，用于AI推荐)
      */
     private String department;
+    /**
+     * 医生姓名
+     */
+    private String doctorName;
 }

@@ -7,7 +7,6 @@
         SELECT *
         FROM message_inbox
         WHERE receiver_id = #{receiverId}
-          AND is_broadcast = 0
           AND deleted = 0
         <if test="messageType != null">
             AND message_type = #{messageType}
@@ -38,9 +37,49 @@
         SELECT COUNT(*)
         FROM message_inbox
         WHERE receiver_id = #{receiverId}
-          AND is_broadcast = 0
           AND status = 0
           AND deleted = 0
     </select>
+    
+    <!-- 批量查询消息 -->
+    <select id="batchSelectByIds" resultType="com.zixin.messageapi.po.Message">
+        SELECT *
+        FROM message_inbox
+        WHERE message_id IN
+        <foreach collection="messageIds" item="messageId" open="(" separator="," close=")">
+            #{messageId}
+        </foreach>
+        AND deleted = 0
+    </select>
+    
+    <!-- 批量更新消息状态 -->
+    <update id="batchUpdateStatus">
+        UPDATE message_inbox
+        SET status = #{status},
+            <if test="readTime != null">
+            read_time = #{readTime},
+            </if>
+            update_time = #{updateTime}
+        WHERE message_id IN
+        <foreach collection="messageIds" item="messageId" open="(" separator="," close=")">
+            #{messageId}
+        </foreach>
+        AND (receiver_id = #{userId} OR sender_id = #{userId})
+        AND deleted = 0
+    </update>
+    
+    <!-- 批量删除消息（软删除） -->
+    <update id="batchDeleteByIds">
+        UPDATE message_inbox
+        SET status = 3,
+            deleted = 1,
+            update_time = #{updateTime}
+        WHERE message_id IN
+        <foreach collection="messageIds" item="messageId" open="(" separator="," close=")">
+            #{messageId}
+        </foreach>
+        AND (receiver_id = #{userId} OR sender_id = #{userId})
+        AND deleted = 0
+    </update>
     
 </mapper>

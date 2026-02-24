@@ -33,7 +33,12 @@ public class Doctor implements Serializable {
      * 账户ID (关联account表的accountId)
      */
     private Long userId;
-    
+
+    /**
+     * 医生姓名
+     */
+    private String username;
+
     /**
      * 科室
      */

@@ -4,6 +4,7 @@ import com.zixin.healthcenterapi.api.HealthReportAPI;
 import com.zixin.healthcenterapi.dto.*;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.BusinessException;
+import com.zixin.utils.exception.ToBCodeEnum;
 import com.zixin.utils.security.RequirePermission;
 import com.zixin.utils.security.RequireRole;
 import com.zixin.utils.utils.Result;
@@ -81,7 +82,6 @@ public class HealthReportController {
      */
     @PostMapping("/upload")
     @RequireRole("PATIENT")
-    @RequirePermission("health:report:write")
     public Result<UploadReportResponse> uploadReport(
             @RequestParam Long patientId,
             @RequestParam Integer reportType,
@@ -129,7 +129,7 @@ public class HealthReportController {
         // 4. 调用Dubbo服务
         UploadReportResponse response = healthReportAPI.uploadReport(uploadRequest);
         
-        if ("SUCCESS".equals(response.getCode().name())) {
+        if (ToBCodeEnum.SUCCESS.equals(response.getCode())) {
             return Result.success(response);
         } else {
             throw new BusinessException(response.getMessage());
@@ -154,7 +154,6 @@ public class HealthReportController {
      */
     @GetMapping("/list")
     @RequireRole("PATIENT")
-    @RequirePermission("health:report:read")
     public Result<QueryReportListResponse> queryReportList(
             @RequestParam Long patientId,
             @RequestParam(required = false) Integer reportType,
@@ -188,7 +187,7 @@ public class HealthReportController {
         // 调用Dubbo服务
         QueryReportListResponse response = healthReportAPI.queryReportList(queryRequest);
         
-        if ("SUCCESS".equals(response.getCode().name())) {
+        if (ToBCodeEnum.SUCCESS.equals(response.getCode())) {
             return Result.success(response);
         } else {
             throw new BusinessException(response.getMessage());
@@ -200,7 +199,6 @@ public class HealthReportController {
      * 
      * 权限要求:
      * - 需要PATIENT角色
-     * - 需要health:report:read权限
      * - 只能查看自己的报告详情
      * 
      * @param reportId 报告ID
@@ -208,7 +206,6 @@ public class HealthReportController {
      */
     @GetMapping("/detail")
     @RequireRole("PATIENT")
-    @RequirePermission("health:report:read")
     public Result<GetReportDetailResponse> getReportDetail(@RequestParam Long reportId) {
         // 从ThreadLocal获取当前用户信息
         Long currentUserId = UserInfoManager.getUserIdOrThrow();

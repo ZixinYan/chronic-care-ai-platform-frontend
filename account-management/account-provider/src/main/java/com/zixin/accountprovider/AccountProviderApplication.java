@@ -9,7 +9,6 @@ import org.springframework.context.annotation.ComponentScan;
 @SpringBootApplication
 @EnableDiscoveryClient
 @MapperScan("com.zixin.accountprovider.mapper")
-@ComponentScan("com.zixin.*")
 public class AccountProviderApplication {
 
     public static void main(String[] args) {

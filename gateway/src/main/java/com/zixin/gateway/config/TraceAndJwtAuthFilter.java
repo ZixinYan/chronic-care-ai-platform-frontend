@@ -23,6 +23,8 @@ import reactor.core.scheduler.Schedulers;
 import reactor.util.context.Context;
 import java.util.*;
 
+import static com.zixin.utils.constant.HeaderConstant.*;
+
 /**
  * 网关JWT认证和链路追踪全局过滤器
  *
@@ -40,12 +42,6 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
 
     @DubboReference(check = false)
     private TokenValidationAPI tokenValidationAPI;
-
-    private static final String TRACE_ID = "X-Trace-Id";
-    private static final String USER_ID = "X-User-Id";
-    private static final String USERNAME = "X-Username";
-    private static final String USER_ROLES = "X-User-Roles";
-    private static final String USER_AUTHORITIES = "X-User-Authorities";
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -122,12 +118,15 @@ public class TraceAndJwtAuthFilter implements GlobalFilter, Ordered {
                             .header(USER_ID, userId == null ? "" : String.valueOf(userId));
 
                     if (username != null) {
+                        log.info("Injecting username into header: {}", username);
                         requestBuilder.header(USERNAME, username);
                     }
                     if (roles != null && !roles.isEmpty()) {
+                        log.info("Injecting roles into header: {}", roles);
                         requestBuilder.header(USER_ROLES, String.join(",", roles));
                     }
                     if (authorities != null && !authorities.isEmpty()) {
+                        log.info("Injecting authorities into header: {}", authorities);
                         requestBuilder.header(USER_AUTHORITIES, String.join(",", authorities));
                     }
 

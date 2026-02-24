@@ -3,6 +3,7 @@ package com.zixin.doctorprovider.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zixin.accountapi.dto.GetDoctorInfoRequest;
+import com.zixin.accountapi.dto.GetMyPatientsRequest;
 import com.zixin.accountapi.dto.GetPatientInfoRequest;
 import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountapi.vo.PatientVO;
@@ -18,6 +19,7 @@ import com.zixin.doctorprovider.mapper.DoctorScheduleMapper;
 import com.zixin.doctorprovider.mapper.ScheduleCategoryMapper;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
+import com.zixin.utils.utils.PageUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
@@ -25,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -79,11 +80,27 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 return response;
             }
             
-            // TODO: 接入AI服务生成智能日程推荐
+            // 生成智能日程推荐
             List<DoctorSchedule> recommendations = generateSchedules(request);
+            if (recommendations == null || recommendations.isEmpty()) {
+                log.warn("No schedule recommendations generated for userId: {}", request.getDoctorId());
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("未生成日程推荐");
+                return response;
+            }
+            
+            // 批量插入日程
             scheduleMapper.batchInsert(recommendations);
+            
+            // 转换为VO并返回
+            List<ScheduleVO> scheduleVOS = recommendations.stream()
+                    .map(this::convertToVO)
+                    .collect(Collectors.toList());
+            
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("AI日程推荐生成成功");
+            response.setRecommendedSchedules(scheduleVOS);
+            response.setRecommendation("基于您的历史数据和当前工作安排，AI为您生成了 " + scheduleVOS.size() + " 条日程建议");
             
             log.info("Generate schedule suggestion success, userId: {}, date: {}",
                     request.getDoctorId(), request.getScheduleDay());
@@ -111,8 +128,8 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
             if (request.getStatus() != null) {
                 wrapper.eq(DoctorSchedule::getStatus, request.getStatus());
             }
-            if (request.getScheduleCategory() != null) {
-                wrapper.eq(DoctorSchedule::getScheduleCategory, request.getScheduleCategory());
+            if (request.getScheduleCategoryId() != null) {
+                wrapper.eq(DoctorSchedule::getScheduleCategory, request.getScheduleCategoryId());
             }
             
             wrapper.orderByDesc(DoctorSchedule::getPriority)
@@ -230,12 +247,13 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
             }
             
             // 5. 更新日程状态和诊断报告
+            long currentTime = System.currentTimeMillis();
             LambdaUpdateWrapper<DoctorSchedule> wrapper = new LambdaUpdateWrapper<>();
             wrapper.eq(DoctorSchedule::getId, request.getScheduleId())
                    .eq(DoctorSchedule::getVersion, schedule.getVersion())  // 乐观锁
                    .set(DoctorSchedule::getStatus, ScheduleStatus.COMPLETED.getCode())
                    .set(DoctorSchedule::getResult, buildResult(request))
-                   .set(DoctorSchedule::getUpdateTime, new Date());
+                   .set(DoctorSchedule::getUpdateTime, currentTime);
             
             int rows = scheduleMapper.update(null, wrapper);
             
@@ -313,12 +331,13 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
             }
             
             // 5. 更新日程状态
+            long currentTime = System.currentTimeMillis();
             LambdaUpdateWrapper<DoctorSchedule> wrapper = new LambdaUpdateWrapper<>();
             wrapper.eq(DoctorSchedule::getId, scheduleId)
                    .eq(DoctorSchedule::getVersion, schedule.getVersion())
                    .set(DoctorSchedule::getStatus, ScheduleStatus.CANCELLED.getCode())
                    .set(DoctorSchedule::getResult, "取消原因: " + reason)
-                   .set(DoctorSchedule::getUpdateTime, new Date());
+                   .set(DoctorSchedule::getUpdateTime, currentTime);
             
             int rows = scheduleMapper.update(null, wrapper);
             
@@ -359,6 +378,12 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 response.setMessage("无效的日程状态: " + status);
                 return response;
             }
+            if (targetStatus.equals(ScheduleStatus.COMPLETED) || targetStatus.equals(ScheduleStatus.CANCELLED)){
+                log.error("Invalid operation: cannot set status to COMPLETED/CANCELLED using this endpoint, scheduleId: {}", scheduleId);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("不允许通过这个接口完成: " + status);
+                return response;
+            }
             
             // 2. 查询日程
             DoctorSchedule schedule = scheduleMapper.selectById(scheduleId);
@@ -370,7 +395,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                 return response;
             }
             
-            // 3. 业务级权限验证: 只能更新自己的日程
+            // 3. 只能更新自己的日程
             if (!schedule.getDoctorId().equals(doctorId)) {
                 log.warn("Permission denied: doctor {} tried to update schedule {} owned by doctor {}", 
                         doctorId, scheduleId, schedule.getDoctorId());
@@ -391,11 +416,12 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
             }
             
             // 5. 更新日程状态
+            long currentTime = System.currentTimeMillis();
             LambdaUpdateWrapper<DoctorSchedule> wrapper = new LambdaUpdateWrapper<>();
             wrapper.eq(DoctorSchedule::getId, scheduleId)
                    .eq(DoctorSchedule::getVersion, schedule.getVersion())  // 乐观锁
                    .set(DoctorSchedule::getStatus, status)
-                   .set(DoctorSchedule::getUpdateTime, new Date());
+                   .set(DoctorSchedule::getUpdateTime, currentTime);
             
             int rows = scheduleMapper.update(null, wrapper);
             
@@ -421,7 +447,39 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
         
         return response;
     }
-    
+
+    @Override
+    public AddScheduleResponse addSchedule(AddScheduleRequest request) {
+        // 1. 构建 DoctorSchedule 对象
+        DoctorSchedule schedule = new DoctorSchedule();
+        BeanUtils.copyProperties(request.getSchedule(), schedule);
+        schedule.setDoctorId(request.getDoctorId());
+        schedule.setDoctorName(request.getDoctorName());
+        schedule.setStatus(ScheduleStatus.PENDING.getCode());  // 新增日程默认为待处理
+        schedule.setCreateTime(System.currentTimeMillis());
+        schedule.setUpdateTime(System.currentTimeMillis());
+        schedule.setPatientId(request.getPatientId());
+        PatientVO patientVO = doctorClient.getPatientInfo(GetPatientInfoRequest.builder()
+                .userId(request.getPatientId())
+                .build());
+        schedule.setPatientName(patientVO != null ? patientVO.getUsername() : "unknown");
+
+        // 2. 插入数据库
+        int rows = scheduleMapper.insert(schedule);
+        AddScheduleResponse response = new AddScheduleResponse();
+        if (rows > 0) {
+            response.setCode(ToBCodeEnum.SUCCESS);
+            response.setMessage("添加日程成功");
+            log.info("Add schedule success, scheduleId: {}, doctorId: {}",
+                    schedule.getId(), request.getDoctorId());
+        } else {
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("添加日程失败");
+            log.warn("Add schedule failed, doctorId: {}", request.getDoctorId());
+        }
+        return response;
+    }
+
     /**
      * 验证日程状态流转是否合法
      * 
@@ -489,24 +547,58 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
             }
         }
 
-        DoctorVO doctorVO = doctorClient.getDoctorInfo(GetDoctorInfoRequest.builder()
+        // 使用userId查询医生和患者信息
+        if (schedule.getDoctorId() != null) {
+            try {
+                DoctorVO doctorVO = doctorClient.getDoctorInfo(GetDoctorInfoRequest.builder()
                         .userId(schedule.getDoctorId())
                         .build());
-        PatientVO patientVO = doctorClient.getPatientInfo(GetPatientInfoRequest.builder()
+                if (doctorVO != null) {
+                    vo.setDoctorName(doctorVO.getUsername());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get doctor info for userId: {}", schedule.getDoctorId(), e);
+            }
+        }
+        
+        if (schedule.getPatientId() != null) {
+            try {
+                PatientVO patientVO = doctorClient.getPatientInfo(GetPatientInfoRequest.builder()
                         .userId(schedule.getPatientId())
                         .build());
-        vo.setDoctorName(doctorVO.getUsername());
-        vo.setPatientName(patientVO.getUsername());
+                if (patientVO != null) {
+                    vo.setPatientName(patientVO.getUsername());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get patient info for userId: {}", schedule.getPatientId(), e);
+            }
+        }
 
         return vo;
     }
     
     /**
-     * 生成模拟日程 (后续替换为AI服务)
+     * 生成智能日程推荐
+     * 
+     * 当前实现：返回空列表（待接入AI服务）
+     * 后续接入AI服务后，将根据以下信息生成日程：
+     * - 医生的历史日程数据
+     * - 患者的预约信息
+     * - 科室的工作安排
+     * - 医生的专业领域和擅长方向
      */
     private List<DoctorSchedule> generateSchedules(GenerateScheduleRequest request) {
+        // TODO: 接入AI服务生成智能日程推荐
+        // 1. 查询医生的历史日程数据
+        // 2. 查询患者的预约信息
+        // 3. 调用AI服务生成日程推荐
+        // 4. 返回生成的日程列表
         
-        return new ArrayList<DoctorSchedule>();
+        log.info("Generate schedules for userId: {}, scheduleDay: {}", 
+                request.getDoctorId(), request.getScheduleDay());
+        
+        // 当前返回空列表，待AI服务接入后实现
+        return new ArrayList<>();
     }
 
     /**

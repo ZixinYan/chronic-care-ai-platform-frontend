@@ -15,6 +15,7 @@ import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountprovider.config.RoleConfig;
 import com.zixin.accountprovider.mapper.*;
 import com.zixin.accountprovider.utils.AccountUtils;
+import com.zixin.utils.exception.BusinessException;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -167,12 +168,14 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
                     .getUserId();
             if(registerRequest.getRoleCodes().contains(RoleCode.DOCTOR.getCode())){
                 registerRequest.getDoctor().setUserId(userId);
+                registerRequest.getDoctor().setUsername(user.getUsername());
                 doctorMapper.insert(BeanUtil.copyProperties(registerRequest.getDoctor(), Doctor.class));
                 log.info("Doctor info inserted for userId: {}, doctor information: {}", user.getUserId(), registerRequest.getDoctor());
             }
             // 7. set Patient information
             if (registerRequest.getRoleCodes().contains(RoleCode.PATIENT.getCode())){
                 registerRequest.getPatient().setUserId(userId);
+                registerRequest.getPatient().setUsername(user.getUsername());
                 if (checkPatientInfo(registerRequest.getPatient())){
                     throw new BusinessException("患者信息不合法");
                 }
@@ -190,17 +193,20 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
             log.warn("Registration failed: {}", e.getMessage());
             registerResponse.setCode(ToBCodeEnum.FAIL);
             registerResponse.setMessage(e.getMessage());
+            throw e; // Rollback transaction for business exceptions
         } catch (DuplicateKeyException e) {
             log.error("Registration failed - duplicate account: {}", registerRequest.getUsername());
             registerResponse.setCode(ToBCodeEnum.FAIL);
             registerResponse.setMessage("Username, phone number or ID card already exists");
+            throw e;
         } catch (Exception e) {
             log.error("Registration failed - system error", e);
             registerResponse.setCode(ToBCodeEnum.FAIL);
             registerResponse.setMessage("System error, please try again later");
+            throw e;
+        } finally {
+            return registerResponse;
         }
-
-        return registerResponse;
     }
 
 
@@ -395,6 +401,7 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
         }
 
         return response;
+
     }
 
     @Override
@@ -747,6 +754,7 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
         if (doctor == null) {
             return true;
         }
+        patient.setAttendingDoctorName(doctor.getUsername());
         return false;
     }
 

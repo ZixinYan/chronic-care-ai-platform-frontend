@@ -29,7 +29,7 @@ public class QueryScheduleRequest implements Serializable {
     /**
      * 日程类别 (可选)
      */
-    private Integer scheduleCategory;
+    private Long scheduleCategoryId;
     
     /**
      * 页码

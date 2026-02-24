@@ -33,13 +33,23 @@ public class Patient implements Serializable {
      * 账户ID
      */
     private Long userId;
+
+    /**
+     * 姓名
+     */
+    private String username;
     
     /**
      * 主治医生ID
      * 用于健康报告权限控制等场景
      */
     private Long attendingDoctorId;
-    
+
+    /**
+     * 医生姓名
+     */
+    private String attendingDoctorName;
+
     /**
      * 病史摘要
      */

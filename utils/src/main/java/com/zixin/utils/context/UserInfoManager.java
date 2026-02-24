@@ -127,17 +127,7 @@ public class UserInfoManager {
         UserInfoContext context = getUserContext();
         return context != null ? context.getUserType() : null;
     }
-    
-    /**
-     * 获取真实姓名
-     * 
-     * @return 真实姓名
-     */
-    public static String getRealName() {
-        UserInfoContext context = getUserContext();
-        return context != null ? context.getRealName() : null;
-    }
-    
+
     /**
      * 获取昵称
      * 

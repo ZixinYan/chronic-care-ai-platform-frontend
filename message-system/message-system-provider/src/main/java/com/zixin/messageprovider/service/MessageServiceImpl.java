@@ -1,16 +1,12 @@
 package com.zixin.messageprovider.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zixin.messageapi.api.MessageAPI;
 import com.zixin.messageapi.dto.*;
 import com.zixin.messageapi.enums.MessageStatus;
 import com.zixin.messageapi.enums.MessageType;
 import com.zixin.messageapi.po.Message;
-import com.zixin.messageapi.po.MessageRecipient;
 import com.zixin.messageapi.vo.MessageVO;
 import com.zixin.messageprovider.mapper.MessageMapper;
-import com.zixin.messageprovider.mapper.MessageRecipientMapper;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
@@ -20,15 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * 站内信服务实现类 (Dubbo服务)
- * 
- * 只提供Dubbo RPC接口,不暴露HTTP Controller
- * 通过Dubbo被Consumer调用
  */
 @Service
 @DubboService
@@ -37,9 +29,6 @@ public class MessageServiceImpl implements MessageAPI {
     
     @Autowired
     private MessageMapper messageMapper;
-    
-    @Autowired
-    private MessageRecipientMapper messageRecipientMapper;
     
     // 消息撤回时间限制(5分钟)
     private static final long REVOKE_TIME_LIMIT = 5 * 60 * 1000;
@@ -122,47 +111,54 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            // 创建群发消息
-            Message message = new Message();
-            message.setMessageType(MessageType.BROADCAST.getCode());
-            message.setSenderId(senderId);
-            message.setReceiverId(null);  // 群发消息receiverId为null
-            message.setTitle(request.getTitle());
-            message.setContent(request.getContent());
-            message.setStatus(MessageStatus.UNREAD.getCode());
-            message.setIsBroadcast(1);
-            message.setCreateTime(System.currentTimeMillis());
-            message.setUpdateTime(System.currentTimeMillis());
+            // 为每个接收者创建一条消息记录
+            Long groupMessageId = null;  // 用于标识同一群发消息组
+            int successCount = 0;
+            long currentTime = System.currentTimeMillis();
             
-            // 插入消息
-            int rows = messageMapper.insert(message);
-            if (rows <= 0) {
+            for (Long receiverId : request.getReceiverIds()) {
+                Message message = new Message();
+                message.setMessageType(MessageType.BROADCAST.getCode());
+                message.setSenderId(senderId);
+                message.setReceiverId(receiverId);  // 为每个接收者创建记录
+                message.setTitle(request.getTitle());
+                message.setContent(request.getContent());
+                message.setStatus(MessageStatus.UNREAD.getCode());
+                message.setIsBroadcast(1);
+                message.setCreateTime(currentTime);
+                message.setUpdateTime(currentTime);
+                
+                // 设置群发消息组ID（第一条消息的ID作为组ID）
+                if (groupMessageId == null) {
+                    int rows = messageMapper.insert(message);
+                    if (rows > 0) {
+                        groupMessageId = message.getMessageId();
+                        message.setGroupMessageId(groupMessageId);
+                        // 更新第一条消息的group_message_id为自己
+                        messageMapper.updateById(message);
+                        successCount++;
+                    }
+                } else {
+                    message.setGroupMessageId(groupMessageId);
+                    int rows = messageMapper.insert(message);
+                    if (rows > 0) {
+                        successCount++;
+                    }
+                }
+            }
+            
+            if (successCount == 0) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("创建群发消息失败");
                 return response;
             }
             
-            // 创建接收者记录
-            List<MessageRecipient> recipients = request.getReceiverIds().stream()
-                    .map(receiverId -> {
-                        MessageRecipient recipient = new MessageRecipient();
-                        recipient.setMessageId(message.getMessageId());
-                        recipient.setReceiverId(receiverId);
-                        recipient.setStatus(MessageStatus.UNREAD.getCode());
-                        recipient.setCreateTime(System.currentTimeMillis());
-                        recipient.setUpdateTime(System.currentTimeMillis());
-                        return recipient;
-                    })
-                    .collect(Collectors.toList());
-            
-            // 批量插入接收者
-            int recipientRows = messageRecipientMapper.batchInsert(recipients);
-            log.info("Broadcast message success, messageId: {}, senderId: {}, recipients count: {}", 
-                    message.getMessageId(), senderId, recipientRows);
+            log.info("Broadcast message success, groupMessageId: {}, senderId: {}, recipients count: {}", 
+                    groupMessageId, senderId, successCount);
             
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("群发消息成功");
-            response.setMessageId(message.getMessageId());
+            response.setMessageId(groupMessageId);
         } catch (Exception e) {
             log.error("Broadcast message error", e);
             response.setCode(ToBCodeEnum.FAIL);
@@ -183,38 +179,18 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            // 查询个人消息
-            List<Message> personalMessages = messageMapper.selectInboxMessages(
+            // 统一查询所有消息（个人消息和群发消息）
+            List<Message> messages = messageMapper.selectInboxMessages(
                     userId, 
                     request.getMessageType(), 
                     request.getUnreadOnly() != null && request.getUnreadOnly() ? 
                             MessageStatus.UNREAD.getCode() : request.getStatus()
             );
             
-            List<MessageVO> result = new ArrayList<>();
-            
-            // 转换个人消息
-            for (Message message : personalMessages) {
-                result.add(convertToVO(message));
-            }
-            
-            // 查询群发消息
-            List<MessageRecipient> recipients = messageRecipientMapper.selectByReceiverId(
-                    userId,
-                    request.getUnreadOnly() != null && request.getUnreadOnly() ? 
-                            MessageStatus.UNREAD.getCode() : request.getStatus()
-            );
-            
-            // 获取群发消息详情
-            for (MessageRecipient recipient : recipients) {
-                Message message = messageMapper.selectById(recipient.getMessageId());
-                if (message != null) {
-                    MessageVO vo = convertToVO(message);
-                    vo.setStatus(recipient.getStatus());  // 使用接收者的状态
-                    vo.setReadTime(recipient.getReadTime());
-                    result.add(vo);
-                }
-            }
+            // 转换为VO
+            List<MessageVO> result = messages.stream()
+                    .map(this::convertToVO)
+                    .collect(Collectors.toList());
             
             log.info("Query inbox success, userId: {}, count: {}", userId, result.size());
             response.setCode(ToBCodeEnum.SUCCESS);
@@ -284,24 +260,11 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            // 验证权限(是发送者或接收者)
+            // 验证权限：只有发送者或接收者可以查看
             if (!userId.equals(message.getSenderId()) && !userId.equals(message.getReceiverId())) {
-                // 检查是否是群发消息的接收者
-                if (message.getIsBroadcast() == 1) {
-                    LambdaQueryWrapper<MessageRecipient> wrapper = new LambdaQueryWrapper<>();
-                    wrapper.eq(MessageRecipient::getMessageId, messageId)
-                           .eq(MessageRecipient::getReceiverId, userId);
-                    MessageRecipient recipient = messageRecipientMapper.selectOne(wrapper);
-                    if (recipient == null) {
-                        response.setCode(ToBCodeEnum.FAIL);
-                        response.setMessage("无权限查看该消息");
-                        return response;
-                    }
-                } else {
-                    response.setCode(ToBCodeEnum.FAIL);
-                    response.setMessage("无权限查看该消息");
-                    return response;
-                }
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("无权限查看该消息");
+                return response;
             }
             
             MessageVO vo = convertToVO(message);
@@ -337,30 +300,19 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            // 检查是否是群发消息
-            if (message.getIsBroadcast() == 1) {
-                // 更新群发消息接收者的状态
-                LambdaUpdateWrapper<MessageRecipient> wrapper = new LambdaUpdateWrapper<>();
-                wrapper.eq(MessageRecipient::getMessageId, messageId)
-                       .eq(MessageRecipient::getReceiverId, userId)
-                       .set(MessageRecipient::getStatus, MessageStatus.READ.getCode())
-                       .set(MessageRecipient::getReadTime, System.currentTimeMillis());
-                int rows = messageRecipientMapper.update(null, wrapper);
-                response.setSuccess(rows > 0);
-            } else {
-                // 更新个人消息状态
-                if (!userId.equals(message.getReceiverId())) {
-                    response.setCode(ToBCodeEnum.FAIL);
-                    response.setMessage("只有接收者可以标记消息为已读");
-                    return response;
-                }
-                
-                message.setStatus(MessageStatus.READ.getCode());
-                message.setReadTime(System.currentTimeMillis());
-                int rows = messageMapper.updateById(message);
-                log.info("Mark as read success, messageId: {}, userId: {}", messageId, userId);
-                response.setSuccess(rows > 0);
+            // 验证权限：只有接收者可以标记消息为已读
+            if (!userId.equals(message.getReceiverId())) {
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("只有接收者可以标记消息为已读");
+                return response;
             }
+            
+            // 统一更新消息状态
+            message.setStatus(MessageStatus.READ.getCode());
+            message.setReadTime(System.currentTimeMillis());
+            int rows = messageMapper.updateById(message);
+            log.info("Mark as read success, messageId: {}, userId: {}", messageId, userId);
+            response.setSuccess(rows > 0);
             
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("标记已读成功");
@@ -385,14 +337,21 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            for (Long messageId : messageIds) {
-                markAsRead(userId, messageId);
-            }
+            // 批量更新消息状态
+            long currentTime = System.currentTimeMillis();
+            int rows = messageMapper.batchUpdateStatus(
+                    messageIds, 
+                    userId, 
+                    MessageStatus.READ.getCode(), 
+                    currentTime,
+                    currentTime
+            );
             
-            log.info("Batch mark as read success, userId: {}, count: {}", userId, messageIds.size());
+            log.info("Batch mark as read success, userId: {}, count: {}, updated: {}", 
+                    userId, messageIds.size(), rows);
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("批量标记已读成功");
-            response.setSuccess(true);
+            response.setSuccess(rows > 0);
         } catch (Exception e) {
             log.error("Batch mark as read error", e);
             response.setCode(ToBCodeEnum.FAIL);
@@ -473,28 +432,17 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            // 检查是否是群发消息
-            if (message.getIsBroadcast() == 1) {
-                // 删除群发消息接收者记录(软删除)
-                LambdaUpdateWrapper<MessageRecipient> wrapper = new LambdaUpdateWrapper<>();
-                wrapper.eq(MessageRecipient::getMessageId, messageId)
-                       .eq(MessageRecipient::getReceiverId, userId)
-                       .set(MessageRecipient::getStatus, MessageStatus.DELETED.getCode());
-                int rows = messageRecipientMapper.update(null, wrapper);
-                response.setSuccess(rows > 0);
-            } else {
-                // 验证权限
-                if (!userId.equals(message.getSenderId()) && !userId.equals(message.getReceiverId())) {
-                    response.setCode(ToBCodeEnum.FAIL);
-                    response.setMessage("无权限删除该消息");
-                    return response;
-                }
-                
-                // 软删除
-                int rows = messageMapper.deleteById(messageId);
-                log.info("Delete message success, messageId: {}, userId: {}", messageId, userId);
-                response.setSuccess(rows > 0);
+            // 验证权限：只有发送者或接收者可以删除
+            if (!userId.equals(message.getSenderId()) && !userId.equals(message.getReceiverId())) {
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("无权限删除该消息");
+                return response;
             }
+            
+            // 统一软删除
+            int rows = messageMapper.deleteById(messageId);
+            log.info("Delete message success, messageId: {}, userId: {}", messageId, userId);
+            response.setSuccess(rows > 0);
             
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("删除消息成功");
@@ -519,14 +467,15 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            for (Long messageId : messageIds) {
-                deleteMessage(userId, messageId);
-            }
+            // 批量删除消息（软删除）
+            long currentTime = System.currentTimeMillis();
+            int rows = messageMapper.batchDeleteByIds(messageIds, userId, currentTime);
             
-            log.info("Batch delete message success, userId: {}, count: {}", userId, messageIds.size());
+            log.info("Batch delete message success, userId: {}, count: {}, deleted: {}", 
+                    userId, messageIds.size(), rows);
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("批量删除消息成功");
-            response.setSuccess(true);
+            response.setSuccess(rows > 0);
         } catch (Exception e) {
             log.error("Batch delete message error", e);
             response.setCode(ToBCodeEnum.FAIL);
@@ -547,14 +496,11 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            // 统计个人消息未读数量
-            Long personalCount = messageMapper.countUnreadMessages(userId);
-            
-            // 统计群发消息未读数量
-            Long broadcastCount = messageRecipientMapper.countUnreadByReceiverId(userId);
-            
-            Long totalCount = (personalCount != null ? personalCount : 0L) + 
-                             (broadcastCount != null ? broadcastCount : 0L);
+            // 统一统计未读消息数量
+            Long totalCount = messageMapper.countUnreadMessages(userId);
+            if (totalCount == null) {
+                totalCount = 0L;
+            }
             
             log.info("Get unread count success, userId: {}, count: {}", userId, totalCount);
             response.setCode(ToBCodeEnum.SUCCESS);
@@ -647,50 +593,57 @@ public class MessageServiceImpl implements MessageAPI {
                 return response;
             }
             
-            // 创建群发消息
-            Message message = new Message();
-            message.setMessageType(request.getMessageType() != null ? 
-                    request.getMessageType() : MessageType.BROADCAST.getCode());
-            message.setSenderId(0L);  // 系统推送消息,senderId为0
-            message.setSenderName("系统");
-            message.setReceiverId(null);  // 群发消息receiverId为null
-            message.setTitle(request.getTitle());
-            message.setContent(request.getContent());
-            message.setStatus(MessageStatus.UNREAD.getCode());
-            message.setIsBroadcast(1);
-            message.setCreateTime(System.currentTimeMillis());
-            message.setUpdateTime(System.currentTimeMillis());
+            // 为每个接收者创建一条消息记录
+            Long groupMessageId = null;  // 用于标识同一群发消息组
+            int successCount = 0;
+            long currentTime = System.currentTimeMillis();
             
-            // 插入消息
-            int rows = messageMapper.insert(message);
-            if (rows <= 0) {
+            for (Long receiverId : request.getReceiverIds()) {
+                Message message = new Message();
+                message.setMessageType(request.getMessageType() != null ? 
+                        request.getMessageType() : MessageType.BROADCAST.getCode());
+                message.setSenderId(0L);  // 系统推送消息,senderId为0
+                message.setSenderName("系统");
+                message.setReceiverId(receiverId);  // 为每个接收者创建记录
+                message.setTitle(request.getTitle());
+                message.setContent(request.getContent());
+                message.setStatus(MessageStatus.UNREAD.getCode());
+                message.setIsBroadcast(1);
+                message.setCreateTime(currentTime);
+                message.setUpdateTime(currentTime);
+                
+                // 设置群发消息组ID（第一条消息的ID作为组ID）
+                if (groupMessageId == null) {
+                    int rows = messageMapper.insert(message);
+                    if (rows > 0) {
+                        groupMessageId = message.getMessageId();
+                        message.setGroupMessageId(groupMessageId);
+                        // 更新第一条消息的group_message_id为自己
+                        messageMapper.updateById(message);
+                        successCount++;
+                    }
+                } else {
+                    message.setGroupMessageId(groupMessageId);
+                    int rows = messageMapper.insert(message);
+                    if (rows > 0) {
+                        successCount++;
+                    }
+                }
+            }
+            
+            if (successCount == 0) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("创建批量推送消息失败");
                 return response;
             }
             
-            // 创建接收者记录
-            List<MessageRecipient> recipients = request.getReceiverIds().stream()
-                    .map(receiverId -> {
-                        MessageRecipient recipient = new MessageRecipient();
-                        recipient.setMessageId(message.getMessageId());
-                        recipient.setReceiverId(receiverId);
-                        recipient.setStatus(MessageStatus.UNREAD.getCode());
-                        recipient.setCreateTime(System.currentTimeMillis());
-                        recipient.setUpdateTime(System.currentTimeMillis());
-                        return recipient;
-                    })
-                    .collect(Collectors.toList());
-            
-            // 批量插入接收者
-            int recipientRows = messageRecipientMapper.batchInsert(recipients);
-            log.info("Batch push message success, messageId: {}, recipients count: {}", 
-                    message.getMessageId(), recipientRows);
+            log.info("Batch push message success, groupMessageId: {}, recipients count: {}", 
+                    groupMessageId, successCount);
             
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("批量推送消息成功");
-            response.setMessageId(message.getMessageId());
-            response.setSuccessCount(recipientRows);
+            response.setMessageId(groupMessageId);
+            response.setSuccessCount(successCount);
             response.setFailedReceiverIds(new ArrayList<>());
         } catch (Exception e) {
             log.error("Batch push message error", e);

@@ -44,4 +44,40 @@ public interface MessageMapper extends BaseMapper<Message> {
      * @return 未读消息数量
      */
     Long countUnreadMessages(@Param("receiverId") Long receiverId);
+    
+    /**
+     * 批量查询消息
+     *
+     * @param messageIds 消息ID列表
+     * @return 消息列表
+     */
+    List<Message> batchSelectByIds(@Param("messageIds") List<Long> messageIds);
+    
+    /**
+     * 批量更新消息状态
+     *
+     * @param messageIds 消息ID列表
+     * @param userId 用户ID（用于权限验证）
+     * @param status 新状态
+     * @param readTime 阅读时间（可为null，Unix毫秒时间戳）
+     * @param updateTime 更新时间（Unix毫秒时间戳）
+     * @return 更新数量
+     */
+    int batchUpdateStatus(@Param("messageIds") List<Long> messageIds,
+                          @Param("userId") Long userId,
+                          @Param("status") Integer status,
+                          @Param("readTime") Long readTime,
+                          @Param("updateTime") Long updateTime);
+    
+    /**
+     * 批量删除消息（软删除）
+     *
+     * @param messageIds 消息ID列表
+     * @param userId 用户ID（用于权限验证）
+     * @param updateTime 更新时间（Unix毫秒时间戳）
+     * @return 删除数量
+     */
+    int batchDeleteByIds(@Param("messageIds") List<Long> messageIds,
+                         @Param("userId") Long userId,
+                         @Param("updateTime") Long updateTime);
 }

@@ -4,8 +4,6 @@ import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
-import java.util.Date;
-
 /**
  * 医生日程表
  * 
@@ -25,12 +23,22 @@ public class DoctorSchedule {
      * 医生ID
      */
     private Long doctorId;
-    
+
+    /**
+     * 医生姓名(redundant, 方便查询展示，实际使用中可以通过doctorId关联查询获取)
+     */
+    private String doctorName;
+
     /**
      * 患者ID
      */
     private Long patientId;
-    
+
+    /**
+     * 患者姓名(redundant, 方便查询展示，实际使用中可以通过patientId关联查询获取)
+     */
+    private String patientName;
+
     /**
      * 日程内容/描述
      */
@@ -39,7 +47,7 @@ public class DoctorSchedule {
     /**
      * 日程类别ID (关联schedule_category表)
      */
-    private Integer scheduleCategory;
+    private Long scheduleCategory;
     
     /**
      * 日程日期 (格式: YYYY-MM-DD)
@@ -60,6 +68,16 @@ public class DoctorSchedule {
      * 执行结果/诊断报告
      */
     private String result;
+
+    /**
+     * 日程开始时间
+     */
+    private Long startTime;
+
+    /**
+     * 日程结束时间
+     */
+    private Long endTime;
     
     /**
      * 创建时间

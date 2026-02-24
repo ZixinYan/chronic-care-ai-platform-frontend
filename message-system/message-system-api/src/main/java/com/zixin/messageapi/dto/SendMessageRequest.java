@@ -1,5 +1,6 @@
 package com.zixin.messageapi.dto;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.List;
  * 发送消息请求DTO
  */
 @Data
+@Builder
 public class SendMessageRequest {
     
     /**
