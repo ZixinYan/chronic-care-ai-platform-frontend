@@ -11,16 +11,25 @@ import com.zixin.utils.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.UUID;
 
 @Slf4j
 @DubboService
 public class OSSServiceImpl implements OSSAPI {
+    private final AliOSSUtils aliOSSUtils;
+
+    public OSSServiceImpl(AliOSSUtils aliOSSUtils) {
+        this.aliOSSUtils = aliOSSUtils;
+    }
+
     @Override
     public OSSUploadFileResponse uploadFile(OSSUploadFileRequest ossUploadFileRequest) {
-        String name = ossUploadFileRequest.getFile().getOriginalFilename();
+        String name = ossUploadFileRequest.getFileName();
         OSSUploadFileResponse ossUploadFileResponse = new OSSUploadFileResponse();
         String filename = null;
         if (name == null) {
@@ -31,14 +40,7 @@ public class OSSServiceImpl implements OSSAPI {
         }
         filename = UUID.randomUUID().toString()+name.substring(name.lastIndexOf("."));
         String url = null;
-        try {
-            url = AliOSSUtils.uploadFile(filename, ossUploadFileRequest.getFile().getInputStream());
-        } catch (IOException e) {
-            log.error("upload file error:{}, reason:{}",filename,e.getMessage());
-            ossUploadFileResponse.setCode(ToBCodeEnum.FAIL);
-            ossUploadFileResponse.setMessage("file name is null");
-            return ossUploadFileResponse;
-        }
+        url = aliOSSUtils.uploadFile(filename, new ByteArrayInputStream(ossUploadFileRequest.getFile()));
         ossUploadFileResponse.setCode(ToBCodeEnum.SUCCESS);
         ossUploadFileResponse.setUrl(url);
         return ossUploadFileResponse;
@@ -46,7 +48,7 @@ public class OSSServiceImpl implements OSSAPI {
 
     @Override
     public OSSMultiUploadFileResponse multiUpload(OSSMultiUploadFileRequest ossMultiUploadFileRequest) {
-        String name = ossMultiUploadFileRequest.getFile().getOriginalFilename();
+        String name = ossMultiUploadFileRequest.getFileName();
         OSSMultiUploadFileResponse ossMultiUploadFileResponse = new OSSMultiUploadFileResponse();
         String filename;
         if (name == null) {
@@ -58,7 +60,7 @@ public class OSSServiceImpl implements OSSAPI {
         filename = UUID.randomUUID().toString()+name.substring(name.lastIndexOf("."));
         String url = null;
         try {
-            url = AliOSSUtils.multipartUploadByStream(filename, ossMultiUploadFileRequest.getFile().getInputStream(),
+            url = aliOSSUtils.multipartUploadByStream(filename, new ByteArrayInputStream(ossMultiUploadFileRequest.getFile()),
                     ossMultiUploadFileRequest.getPartSize(), ossMultiUploadFileRequest.getMaxRetry());
         } catch (Exception e) {
             log.error("multi upload error:{}, reason:{}",filename,e.getMessage());

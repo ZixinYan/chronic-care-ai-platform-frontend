@@ -27,27 +27,19 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/doctor/workbench")
 @Slf4j
 public class DoctorWorkbenchController {
-    
+
     @DubboReference(check = false)
     private DoctorWorkbenchAPI workbenchAPI;
 
     /**
      * 添加日程
      * @param request
-     * @param userId
      * @return
      */
     @PostMapping("/schedule/add")
     @RequireRole("DOCTOR")
-    public Result<Boolean> addSchedule(
-            @RequestBody AddScheduleRequest request,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Username") String username) {
-        request.setDoctorId(userId);
-        request.setDoctorName(username);
-        log.info("Add schedule request, doctorId: {}, date: {}",
-                userId, request.getSchedule().getScheduleDay());
-
+    public Result<Boolean> addSchedule(@RequestBody AddScheduleRequest request) {
+        log.info("Add schedule request, doctorId: {}, date: {}", request.getSchedule().getScheduleDay());
         AddScheduleResponse response = workbenchAPI.addSchedule(request);
 
         if (response.getCode() == ToBCodeEnum.SUCCESS) {
@@ -74,19 +66,19 @@ public class DoctorWorkbenchController {
         request.setDoctorName(UserInfoManager.getUsername());
         log.info("Generate schedule request, doctorId: {}, date: {}",
                 UserInfoManager.getUserId(), request.getScheduleDay());
-        
+
         GenerateScheduleResponse response = workbenchAPI.generateScheduleSuggestion(request);
-        
+
         if (response.getCode() == ToBCodeEnum.SUCCESS) {
             return Result.success(response);
         } else {
             return Result.error(response.getMessage());
         }
     }
-    
+
     /**
      * 查看日程表
-     * 
+     *
      * 权限要求:
      * - 角色: DOCTOR
      * @param request 查询条件
@@ -94,31 +86,30 @@ public class DoctorWorkbenchController {
      */
     @GetMapping("/schedule/list")
     @RequireRole("DOCTOR")
-    public Result<QueryScheduleResponse> querySchedule(
-            @ModelAttribute QueryScheduleRequest request) {
-        
+    public Result<QueryScheduleResponse> querySchedule(@RequestBody QueryScheduleRequest request) {
+
         // 强制使用JWT中的userId,防止越权查询
         request.setDoctorId(UserInfoManager.getUserId());
-        
+
         log.info("Query schedule request, doctorId: {}, date: {}",
                 UserInfoManager.getUserId(), request.getScheduleDay());
-        
+
         QueryScheduleResponse response = workbenchAPI.querySchedule(request);
-        
+
         if (response.getCode() == ToBCodeEnum.SUCCESS) {
             return Result.success(response);
         } else {
             return Result.error(response.getMessage());
         }
     }
-    
+
     /**
      * 获取日程详情
-     * 
+     *
      * 权限要求:
      * - 角色: DOCTOR
      * - 权限: doctor:read (医生读权限)
-     * 
+     *
      * 安全策略:
      * - 从X-User-Id Header获取医生ID
      * - Provider层会验证日程归属,防止查看其他医生的日程
@@ -130,19 +121,19 @@ public class DoctorWorkbenchController {
     @RequireRole("DOCTOR")
     public Result<ScheduleVO> getScheduleDetail(
             @RequestParam("scheduleId") Long scheduleId) {
-        
+
         log.info("Get schedule detail, scheduleId: {}, doctorId: {}", scheduleId, UserInfoManager.getUserId());
-        
+
         // Provider层会验证schedule.doctorId == userId
         GetScheduleDetailResponse response = workbenchAPI.getScheduleDetail(scheduleId, UserInfoManager.getUserId());
-        
+
         if (response.getCode() == ToBCodeEnum.SUCCESS) {
             return Result.success(response.getSchedule());
         } else {
             return Result.error(response.getMessage());
         }
     }
-    
+
     /**
      * 完成日程并上传诊断报告
      * @param request 完成日程请求
@@ -155,18 +146,18 @@ public class DoctorWorkbenchController {
 
         // 使用JWT中的userId
         request.setDoctorId(UserInfoManager.getUserId());
-        log.info("Complete schedule request, scheduleId: {}, doctorId: {}", 
+        log.info("Complete schedule request, scheduleId: {}, doctorId: {}",
                 request.getScheduleId(), UserInfoManager.getUserId());
-        
+
         CompleteScheduleResponse response = workbenchAPI.completeSchedule(request);
-        
+
         if (response.getCode() == ToBCodeEnum.SUCCESS) {
             return Result.success(response);
         } else {
             return Result.error(response.getMessage());
         }
     }
-    
+
     /**
      * 取消日程
      * @param scheduleId 日程ID
@@ -178,20 +169,20 @@ public class DoctorWorkbenchController {
     public Result<Boolean> cancelSchedule(
             @RequestParam("scheduleId") Long scheduleId,
             @RequestParam("reason") String reason) {
-        
-        log.info("Cancel schedule request, scheduleId: {}, doctorId: {}, reason: {}", 
+
+        log.info("Cancel schedule request, scheduleId: {}, doctorId: {}, reason: {}",
                 scheduleId, UserInfoManager.getUserId(), reason);
-        
+
         // Provider层会验证日程归属
         CancelScheduleResponse response = workbenchAPI.cancelSchedule(scheduleId, UserInfoManager.getUserId(), reason);
-        
+
         if (response.getCode() == ToBCodeEnum.SUCCESS) {
             return Result.success(true);
         } else {
             return Result.error(response.getMessage());
         }
     }
-    
+
     /**
      * 更新日程状态
      * @param scheduleId 日程ID
@@ -203,13 +194,13 @@ public class DoctorWorkbenchController {
     public Result<Boolean> updateScheduleStatus(
             @RequestParam(value = "scheduleId") Long scheduleId,
             @RequestParam(value = "status") String status ) {
-        
-        log.info("Update schedule status, scheduleId: {}, doctorId: {}, status: {}", 
+
+        log.info("Update schedule status, scheduleId: {}, doctorId: {}, status: {}",
                 scheduleId, UserInfoManager.getUserId(), status);
-        
+
         // Provider层会验证日程归属和状态流转
         UpdateScheduleStatusResponse response = workbenchAPI.updateScheduleStatus(scheduleId, UserInfoManager.getUserId(), status);
-        
+
         if (response.getCode() == ToBCodeEnum.SUCCESS) {
             return Result.success(true);
         } else {

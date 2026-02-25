@@ -46,7 +46,6 @@ public class TraceIdProviderFilter implements Filter {
                         context.getUserId(), context.getUsername(),
                         MDC.get(HeaderConstant.TRACE_ID));
             }
-            log.info("header:{}, value:{}", HeaderConstant.TRACE_ID, traceId);
         } catch (Exception e) {
             log.error("RPC服务端恢复用户信息失败", e);
         }

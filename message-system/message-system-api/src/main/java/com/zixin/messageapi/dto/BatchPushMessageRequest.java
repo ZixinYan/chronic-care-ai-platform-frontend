@@ -2,6 +2,7 @@ package com.zixin.messageapi.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -10,8 +11,9 @@ import java.util.List;
  * 用于B端系统批量推送消息给多个用户
  */
 @Data
-public class BatchPushMessageRequest {
-    
+public class BatchPushMessageRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     /**
      * 消息类型
      * 1 - SYSTEM (系统通知)

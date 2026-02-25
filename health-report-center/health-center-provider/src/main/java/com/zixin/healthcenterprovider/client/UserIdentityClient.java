@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class UserIdentityClient {
-    @DubboReference(check = false)
+    @DubboReference(timeout = 50000)
     private UserIdentityAPI userIdentityAPI;
 
     public PatientVO getPatientInfo(Long userId) {

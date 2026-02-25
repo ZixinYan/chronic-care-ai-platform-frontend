@@ -4,6 +4,8 @@ import com.zixin.utils.utils.BaseResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
+
 /**
  * 上传健康报告响应
  * 
@@ -11,8 +13,8 @@ import lombok.EqualsAndHashCode;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class UploadReportResponse extends BaseResponse {
-    
+public class UploadReportResponse extends BaseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 报告ID
      */

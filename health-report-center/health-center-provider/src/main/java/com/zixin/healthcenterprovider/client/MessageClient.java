@@ -15,13 +15,13 @@ import java.util.concurrent.Executors;
 @Service
 @Slf4j
 public class MessageClient {
-    @DubboReference
+    @DubboReference(timeout = 50000)
     private MessageAPI messageAPI;
 
     private final ExecutorService messageExecutor = Executors.newFixedThreadPool(10);
 
-    public CompletableFuture<Boolean> sendMessageAsync(Long userId, SendMessageRequest request) {
-        return CompletableFuture.supplyAsync(() -> {
+    public void sendMessageAsync(Long userId, SendMessageRequest request) {
+        CompletableFuture.supplyAsync(() -> {
             try {
                 log.debug("开始异步发送消息, userId: {}, receiverId: {}",
                         userId, request.getReceiverId());

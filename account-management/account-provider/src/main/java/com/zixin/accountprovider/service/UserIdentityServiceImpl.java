@@ -118,7 +118,7 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             
             if (patient == null) {
                 response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("患者不存在");
+                response.setMessage("患者不存在, userid:" + request.getUserId());
                 return response;
             }
             

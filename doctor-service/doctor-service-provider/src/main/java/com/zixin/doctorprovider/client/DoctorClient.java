@@ -15,7 +15,7 @@ import java.util.List;
 
 @Service
 public class DoctorClient {
-    @DubboReference(check = false)
+    @DubboReference(timeout = 50000)
     private UserIdentityAPI userIdentityAPI;
 
     public DoctorVO getDoctorInfo(GetDoctorInfoRequest request) {

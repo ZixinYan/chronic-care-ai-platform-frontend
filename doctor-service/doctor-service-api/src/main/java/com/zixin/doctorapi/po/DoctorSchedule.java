@@ -45,9 +45,9 @@ public class DoctorSchedule {
     private String schedule;
     
     /**
-     * 日程类别ID (关联schedule_category表)
+     * 日程类别
      */
-    private Long scheduleCategory;
+    private String scheduleCategory;
     
     /**
      * 日程日期 (格式: YYYY-MM-DD)
@@ -68,6 +68,11 @@ public class DoctorSchedule {
      * 执行结果/诊断报告
      */
     private String result;
+
+    /**
+     * 关联链接
+     */
+    private String link;
 
     /**
      * 日程开始时间

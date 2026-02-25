@@ -2,21 +2,20 @@ package com.zixin.doctorprovider.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zixin.accountapi.dto.GetDoctorInfoRequest;
-import com.zixin.accountapi.dto.GetMyPatientsRequest;
 import com.zixin.accountapi.dto.GetPatientInfoRequest;
 import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountapi.vo.PatientVO;
 import com.zixin.doctorapi.api.DoctorWorkbenchAPI;
 import com.zixin.doctorapi.dto.*;
+import com.zixin.doctorapi.enums.ScheduleCategory;
 import com.zixin.doctorapi.enums.SchedulePriority;
 import com.zixin.doctorapi.enums.ScheduleStatus;
 import com.zixin.doctorapi.po.DoctorSchedule;
-import com.zixin.doctorapi.po.ScheduleCategory;
 import com.zixin.doctorapi.vo.ScheduleVO;
 import com.zixin.doctorprovider.client.DoctorClient;
 import com.zixin.doctorprovider.mapper.DoctorScheduleMapper;
-import com.zixin.doctorprovider.mapper.ScheduleCategoryMapper;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
 import com.zixin.utils.utils.PageUtils;
@@ -54,12 +53,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
     private final DoctorScheduleMapper scheduleMapper;
-    private final ScheduleCategoryMapper categoryMapper;
     private final DoctorClient doctorClient;
 
-    public DoctorWorkbenchServiceImpl(DoctorScheduleMapper scheduleMapper, ScheduleCategoryMapper categoryMapper, DoctorClient doctorClient) {
+    public DoctorWorkbenchServiceImpl(DoctorScheduleMapper scheduleMapper, DoctorClient doctorClient) {
         this.scheduleMapper = scheduleMapper;
-        this.categoryMapper = categoryMapper;
         this.doctorClient = doctorClient;
     }
 
@@ -112,16 +109,25 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
         
         return response;
     }
-    
+
     @Override
     public QueryScheduleResponse querySchedule(QueryScheduleRequest request) {
         QueryScheduleResponse response = new QueryScheduleResponse();
-        
+
         try {
-            // 构建查询条件
+            // 1. 创建 MyBatis-Plus 的分页对象
+            Page<DoctorSchedule> page = new Page<>(
+                    request.getPageNum(),
+                    request.getPageSize()
+            );
+
+            // 2. 构建查询条件
             LambdaQueryWrapper<DoctorSchedule> wrapper = new LambdaQueryWrapper<>();
+
+            // 医生ID是必填条件
             wrapper.eq(DoctorSchedule::getDoctorId, request.getDoctorId());
-            
+
+            // 可选条件
             if (request.getScheduleDay() != null) {
                 wrapper.eq(DoctorSchedule::getScheduleDay, request.getScheduleDay());
             }
@@ -131,31 +137,40 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
             if (request.getScheduleCategoryId() != null) {
                 wrapper.eq(DoctorSchedule::getScheduleCategory, request.getScheduleCategoryId());
             }
-            
+
+            // 排序
             wrapper.orderByDesc(DoctorSchedule::getPriority)
-                   .orderByDesc(DoctorSchedule::getCreateTime);
-            
-            // 查询
-            List<DoctorSchedule> schedules = scheduleMapper.selectList(wrapper);
-            
-            // 转换VO
-            List<ScheduleVO> scheduleVOS = schedules.stream()
-                    .map(this::convertToVO)
-                    .collect(Collectors.toList());
-            
+                    .orderByDesc(DoctorSchedule::getCreateTime);
+
+            // 3. 执行分页查询
+            Page<DoctorSchedule> schedulePage = scheduleMapper.selectPage(page, wrapper);
+
+            // 4. 使用自定义 PageUtils 封装分页数据
+            PageUtils pageUtils = new PageUtils(schedulePage);
+
+            // 5. 转换VO（如果需要转换的话）
+            if (pageUtils.getList() != null && !pageUtils.getList().isEmpty()) {
+                List<ScheduleVO> scheduleVOS = ((List<DoctorSchedule>) pageUtils.getList()).stream()
+                        .map(this::convertToVO)
+                        .collect(Collectors.toList());
+                pageUtils.setList(scheduleVOS);
+            }
+
+            // 6. 构建返回对象
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("查询成功");
-            response.setSchedules(scheduleVOS);
-            response.setTotal((long) scheduleVOS.size());
-            
-            log.info("Query schedule success, doctorId: {}, count: {}", 
-                    request.getDoctorId(), scheduleVOS.size());
+            response.setSchedules(pageUtils);
+
+            log.info("Query schedule success, doctorId: {}, total: {}, pageNum: {}, pageSize: {}",
+                    request.getDoctorId(), pageUtils.getTotalCount(),
+                    request.getPageNum(), request.getPageSize());
+
         } catch (Exception e) {
             log.error("Query schedule error", e);
             response.setCode(ToBCodeEnum.FAIL);
             response.setMessage("查询日程失败: " + e.getMessage());
         }
-        
+
         return response;
     }
     
@@ -366,7 +381,7 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
     @Transactional(rollbackFor = Exception.class)
     public UpdateScheduleStatusResponse updateScheduleStatus(Long scheduleId, Long doctorId, String status) {
         UpdateScheduleStatusResponse response = new UpdateScheduleStatusResponse();
-        
+
         try {
             // 1. 验证状态合法性
             ScheduleStatus targetStatus;
@@ -453,8 +468,13 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
         // 1. 构建 DoctorSchedule 对象
         DoctorSchedule schedule = new DoctorSchedule();
         BeanUtils.copyProperties(request.getSchedule(), schedule);
-        schedule.setDoctorId(request.getDoctorId());
-        schedule.setDoctorName(request.getDoctorName());
+        if(request.getDoctorId() == null) {
+            schedule.setDoctorId(UserInfoManager.getUserId());
+            schedule.setDoctorName(UserInfoManager.getUsername());
+        }else{
+            schedule.setDoctorId(request.getDoctorId());
+            schedule.setDoctorName(request.getDoctorName());
+        }
         schedule.setStatus(ScheduleStatus.PENDING.getCode());  // 新增日程默认为待处理
         schedule.setCreateTime(System.currentTimeMillis());
         schedule.setUpdateTime(System.currentTimeMillis());
@@ -541,9 +561,12 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
         
         // 设置类别名称
         if (schedule.getScheduleCategory() != null) {
-            ScheduleCategory category = categoryMapper.selectById(schedule.getScheduleCategory());
+            ScheduleCategory category = ScheduleCategory.getByName(schedule.getScheduleCategory());
             if (category != null) {
-                vo.setScheduleCategoryName(category.getCategoryName());
+                vo.setScheduleCategoryName(category.getDescription());
+            } else {
+                log.warn("Unknown schedule category: {}", schedule.getScheduleCategory());
+                vo.setScheduleCategoryName("unknown");
             }
         }
 

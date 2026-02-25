@@ -84,19 +84,19 @@ public class HealthReport {
      * 报告日期
      * 检查/体检的实际日期
      */
-    private Long reportDate;
-    
+    private String reportDate;
+
     /**
      * 上传者ID (关联account表)
      * 可能是患者本人或医生代为上传
      */
     private Long uploaderId;
-    
+
     /**
      * 上传者姓名
      */
     private String uploaderName;
-    
+
     /**
      * 医疗机构名称
      */

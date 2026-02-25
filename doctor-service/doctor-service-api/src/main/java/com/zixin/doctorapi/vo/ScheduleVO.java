@@ -11,6 +11,10 @@ import java.io.Serializable;
 public class ScheduleVO implements Serializable {
     private static final long serialVersionUID = 1L;
     /**
+     * 日程id
+     */
+    private Long id;
+    /**
      * 医生姓名
      */
     private String doctorName;
@@ -61,6 +65,12 @@ public class ScheduleVO implements Serializable {
      * 执行结果
      */
     private String result;
+
+    /**
+     * 关联链接
+     */
+    private String link;
+
     /**
      * 开始时间
      */

@@ -1,5 +1,6 @@
 package com.zixin.doctorapi.dto;
 
+import com.zixin.utils.utils.PageUtils;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -20,10 +21,6 @@ public class QueryScheduleResponse extends BaseResponse implements Serializable 
     /**
      * 日程列表
      */
-    private List<ScheduleVO> schedules;
-    
-    /**
-     * 总数
-     */
-    private Long total;
+    private PageUtils schedules;
+
 }

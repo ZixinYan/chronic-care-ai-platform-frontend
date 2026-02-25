@@ -17,7 +17,9 @@ public class GetUserInfoResponse extends BaseResponse implements Serializable {
 
 
    @Data
-   public static class UserInfoDTO{
+   public static class UserInfoDTO implements Serializable{
+       private static final long serialVersionUID = 1L;
+       private Long userId;
        private String username;
        private String nickname;
        private Integer gender;

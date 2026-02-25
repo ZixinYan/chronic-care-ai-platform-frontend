@@ -3,6 +3,7 @@ package com.zixin.messageapi.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -10,7 +11,8 @@ import java.util.List;
  */
 @Data
 @Builder
-public class SendMessageRequest {
+public class SendMessageRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
     
     /**
      * 消息类型
@@ -43,4 +45,6 @@ public class SendMessageRequest {
      * 消息内容
      */
     private String content;
+
+    private String senderName;
 }

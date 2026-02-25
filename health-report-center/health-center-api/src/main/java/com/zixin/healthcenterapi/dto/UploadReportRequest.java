@@ -4,13 +4,16 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.Serializable;
+
 /**
  * 上传健康报告请求
  * 
  * @author zixin
  */
 @Data
-public class UploadReportRequest {
+public class UploadReportRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 上传ID
      */
@@ -45,8 +48,7 @@ public class UploadReportRequest {
      * 上传的文件 (图片/PDF)
      * 仅当reportType为IMAGE或PDF时需要
      */
-    private MultipartFile file;
-    
+    private String fileUrl;
     /**
      * 文字内容
      * 仅当reportType为TEXT时需要

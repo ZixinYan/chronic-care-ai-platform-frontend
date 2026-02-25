@@ -1,12 +1,15 @@
 package com.zixin.messageprovider.service;
 
+import com.zixin.accountapi.dto.GetUserInfoResponse;
 import com.zixin.messageapi.api.MessageAPI;
 import com.zixin.messageapi.dto.*;
 import com.zixin.messageapi.enums.MessageStatus;
 import com.zixin.messageapi.enums.MessageType;
 import com.zixin.messageapi.po.Message;
 import com.zixin.messageapi.vo.MessageVO;
+import com.zixin.messageprovider.client.AccountClient;
 import com.zixin.messageprovider.mapper.MessageMapper;
+import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -26,26 +30,25 @@ import java.util.stream.Collectors;
 @DubboService
 @Slf4j
 public class MessageServiceImpl implements MessageAPI {
-    
-    @Autowired
-    private MessageMapper messageMapper;
+
+    private final MessageMapper messageMapper;
+    private final AccountClient accountClient;
     
     // 消息撤回时间限制(5分钟)
     private static final long REVOKE_TIME_LIMIT = 5 * 60 * 1000;
-    
+
+    public MessageServiceImpl(MessageMapper messageMapper, AccountClient accountClient) {
+        this.messageMapper = messageMapper;
+        this.accountClient = accountClient;
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SendMessageResponse sendMessage(Long senderId, SendMessageRequest request) {
         SendMessageResponse response = new SendMessageResponse();
-        
+
         try {
             // 参数验证
-            if (senderId == null || request.getReceiverId() == null) {
-                response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("发送者和接收者不能为空");
-                return response;
-            }
-            
             if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("消息标题不能为空");
@@ -57,14 +60,30 @@ public class MessageServiceImpl implements MessageAPI {
             message.setMessageType(request.getMessageType() != null ? 
                     request.getMessageType() : MessageType.PERSONAL.getCode());
             message.setSenderId(senderId);
-            message.setReceiverId(request.getReceiverId());
             message.setTitle(request.getTitle());
             message.setContent(request.getContent());
             message.setStatus(MessageStatus.UNREAD.getCode());
             message.setIsBroadcast(0);
             message.setCreateTime(System.currentTimeMillis());
             message.setUpdateTime(System.currentTimeMillis());
-            
+            if(request.getSenderName() != null) {
+                message.setSenderName(request.getSenderName());
+            }else{
+                message.setSenderName(UserInfoManager.getUsername());
+            }
+
+            if(request.getReceiverId() != null){
+                // 单插消息
+                message.setReceiverId(request.getReceiverId());
+                List<Long> receiverIds = new ArrayList<>();
+                receiverIds.add(request.getReceiverId());
+                message.setReceiverName(accountClient.getUserInfo(receiverIds).get(0).getUsername());
+            }else{
+                log.error("ReceiverId is null for personal message, senderId: {}", senderId);
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("接收者ID不能为空");
+                return response;
+            }
             // 插入数据库
             int rows = messageMapper.insert(message);
             if (rows > 0) {
@@ -92,13 +111,6 @@ public class MessageServiceImpl implements MessageAPI {
         SendMessageResponse response = new SendMessageResponse();
         
         try {
-            // 参数验证
-            if (senderId == null) {
-                response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("发送者不能为空");
-                return response;
-            }
-            
             if (request.getReceiverIds() == null || request.getReceiverIds().isEmpty()) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("接收者列表不能为空");
@@ -115,12 +127,17 @@ public class MessageServiceImpl implements MessageAPI {
             Long groupMessageId = null;  // 用于标识同一群发消息组
             int successCount = 0;
             long currentTime = System.currentTimeMillis();
+
+            List<GetUserInfoResponse.UserInfoDTO> user = accountClient.getUserInfo(request.getReceiverIds());
+            Map<Long, GetUserInfoResponse.UserInfoDTO> userHandler = user.stream().collect(Collectors.toMap(GetUserInfoResponse.UserInfoDTO::getUserId, u -> u));
             
             for (Long receiverId : request.getReceiverIds()) {
                 Message message = new Message();
                 message.setMessageType(MessageType.BROADCAST.getCode());
-                message.setSenderId(senderId);
+                message.setSenderId(UserInfoManager.getUserId());
+                message.setSenderName(UserInfoManager.getUsername());
                 message.setReceiverId(receiverId);  // 为每个接收者创建记录
+                message.setReceiverName(userHandler.get(receiverId) != null ? userHandler.get(receiverId).getUsername() : "未知用户");
                 message.setTitle(request.getTitle());
                 message.setContent(request.getContent());
                 message.setStatus(MessageStatus.UNREAD.getCode());
@@ -154,7 +171,7 @@ public class MessageServiceImpl implements MessageAPI {
             }
             
             log.info("Broadcast message success, groupMessageId: {}, senderId: {}, recipients count: {}", 
-                    groupMessageId, senderId, successCount);
+                    groupMessageId, UserInfoManager.getUserId(), successCount);
             
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("群发消息成功");

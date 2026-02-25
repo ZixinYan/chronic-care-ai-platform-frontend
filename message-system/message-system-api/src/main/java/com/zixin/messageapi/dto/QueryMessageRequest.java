@@ -2,12 +2,14 @@ package com.zixin.messageapi.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 消息查询请求DTO
  */
 @Data
-public class QueryMessageRequest {
-    
+public class QueryMessageRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 消息类型
      */
