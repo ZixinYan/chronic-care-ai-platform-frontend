@@ -400,4 +400,17 @@ public class JwtUtils {
             return null;
         }
     }
+
+    /**
+     * 从Token获取Token ID
+     */
+    public String getTokenIdFromToken(String token) {
+        try {
+            Jwt jwt = jwtDecoder.decode(token);
+            return jwt.getId();
+        } catch (JwtException e) {
+            log.error("Failed to extract token ID from token: {}", e.getMessage());
+            return null;
+        }
+    }
 }

@@ -7,7 +7,9 @@ import com.aliyun.oss.common.comm.SignVersion;
 import com.aliyun.oss.model.*;
 import com.zixin.thirdpartyapi.dto.OSSUploadFileRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -21,26 +23,28 @@ import java.util.Random;
  * 没有提供下载和删除接口，如有需要自己扩展
  */
 @Slf4j
-public final class AliOSSUtils {
+@Component
+public class AliOSSUtils {
     @Value("${spring.oss.endpoint}")
-    private static String ENDPOINT;
+    private String ENDPOINT;
 
     @Value("${spring.oss.access_key_id}")
-    private static String ACCESS_KEY_ID;
+    private String ACCESS_KEY_ID;
 
     @Value("${spring.oss.access_key_secret}")
-    private static String ACCESS_KEY_SECRET;
+    private String ACCESS_KEY_SECRET;
 
     @Value("${spring.oss.bucket_name}")
-    private static String BUCKET_NAME;
+    private String BUCKET_NAME;
 
 
-    public static String uploadFile(String objectName, InputStream in) throws ClientException {
+    public String uploadFile(String objectName, InputStream in) throws ClientException {
         // 创建OSSClient实例。
         // 当OSSClient实例不再使用时，调用shutdown方法以释放资源。
         ClientBuilderConfiguration clientBuilderConfiguration = new ClientBuilderConfiguration();
         // 显式声明使用 V4 签名算法
-        clientBuilderConfiguration.setSignatureVersion(SignVersion.V4);
+        clientBuilderConfiguration.setSignatureVersion(SignVersion.V1);
+        log.info("start upload file to oss, objectName: {},{},{},{}", ACCESS_KEY_ID,ACCESS_KEY_SECRET,ENDPOINT,BUCKET_NAME);
         OSS ossClient = new OSSClientBuilder().build(ENDPOINT, ACCESS_KEY_ID, ACCESS_KEY_SECRET, clientBuilderConfiguration);
         // 上传url
         String url = "";
@@ -69,7 +73,7 @@ public final class AliOSSUtils {
         return url;
     }
 
-    public static String multipartUploadByStream(String objectName, InputStream inputStream, long partSize, int maxRetry) throws Exception {
+    public String multipartUploadByStream(String objectName, InputStream inputStream, long partSize, int maxRetry) throws Exception {
 
         ClientBuilderConfiguration conf = new ClientBuilderConfiguration();
         conf.setSignatureVersion(SignVersion.V4);
@@ -138,7 +142,7 @@ public final class AliOSSUtils {
     }
 
     // 清楚碎片文件
-    public static boolean abortMultipartUpload(String objectName, String uploadId) throws Exception {
+    public  boolean abortMultipartUpload(String objectName, String uploadId) throws Exception {
         ClientBuilderConfiguration conf = new ClientBuilderConfiguration();
         conf.setSignatureVersion(SignVersion.V4);
 
@@ -163,7 +167,7 @@ public final class AliOSSUtils {
     }
 
 
-    private static String generatePresignedUrl(OSS ossClient, String objectName) {
+    private String generatePresignedUrl(OSS ossClient, String objectName) {
         // URL 有效期：1 小时
         Date expiration = new Date(System.currentTimeMillis() + 3600_000);
         URL url = ossClient.generatePresignedUrl(

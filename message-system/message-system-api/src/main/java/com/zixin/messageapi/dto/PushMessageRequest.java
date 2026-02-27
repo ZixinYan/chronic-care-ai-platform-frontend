@@ -2,14 +2,16 @@ package com.zixin.messageapi.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 推送消息请求DTO (B端接口)
  * 
  * 用于B端系统推送消息给用户
  */
 @Data
-public class PushMessageRequest {
-    
+public class PushMessageRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 消息类型
      * 1 - SYSTEM (系统通知)

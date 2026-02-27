@@ -7,7 +7,6 @@
 
     <select id="selectByRoleCodes"
             resultType="com.zixin.accountapi.po.RolePermission">
-
         select
         id,
         role_code,

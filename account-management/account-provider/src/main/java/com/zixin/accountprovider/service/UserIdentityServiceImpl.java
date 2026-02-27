@@ -1,6 +1,8 @@
 package com.zixin.accountprovider.service;
 
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zixin.accountapi.api.UserIdentityAPI;
 import com.zixin.accountapi.dto.*;
 import com.zixin.accountapi.po.User;
@@ -12,11 +14,14 @@ import com.zixin.accountprovider.mapper.UserMapper;
 import com.zixin.accountprovider.mapper.DoctorMapper;
 import com.zixin.accountprovider.mapper.PatientMapper;
 import com.zixin.utils.exception.ToBCodeEnum;
+import com.zixin.utils.utils.PageUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * 用户身份信息服务实现
@@ -47,9 +52,9 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             Doctor doctor = null;
             if (request.getDoctorId() != null) {
                 doctor = doctorMapper.selectById(request.getDoctorId());
-            } else if (request.getAccountId() != null) {
+            } else if (request.getUserId() != null) {
                 LambdaQueryWrapper<Doctor> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(Doctor::getAccountId, request.getAccountId());
+                wrapper.eq(Doctor::getUserId, request.getUserId());
                 doctor = doctorMapper.selectOne(wrapper);
             }
             
@@ -60,7 +65,7 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             }
             
             // 查询账户信息
-            User user = userMapper.selectById(doctor.getAccountId());
+            User user = userMapper.selectById(doctor.getUserId());
             if (user == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("关联账户不存在");
@@ -72,13 +77,13 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             BeanUtils.copyProperties(doctor, vo);
             BeanUtils.copyProperties(user, vo);
             vo.setUsername(user.getUsername());
-            
+
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("查询成功");
             response.setDoctor(vo);
             
-            log.info("Get doctor info success, doctorId: {}, accountId: {}", 
-                    doctor.getId(), doctor.getAccountId());
+            log.info("Get doctor info success, doctorId: {}, userId: {}", 
+                    doctor.getId(), doctor.getUserId());
         } catch (Exception e) {
             log.error("Get doctor info error", e);
             response.setCode(ToBCodeEnum.FAIL);
@@ -89,10 +94,11 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
     }
     
     @Override
-    public GetDoctorInfoResponse getDoctorInfoByAccountId(Long accountId) {
-        GetDoctorInfoRequest request = new GetDoctorInfoRequest();
-        request.setAccountId(accountId);
-        return getDoctorInfo(request);
+    public GetDoctorInfoResponse getDoctorInfoByUserId(Long userId) {
+        return getDoctorInfo(GetDoctorInfoRequest
+                .builder()
+                .userId(userId)
+                .build());
     }
     
     @Override
@@ -104,20 +110,20 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             Patient patient = null;
             if (request.getPatientId() != null) {
                 patient = patientMapper.selectById(request.getPatientId());
-            } else if (request.getAccountId() != null) {
+            } else if (request.getUserId() != null) {
                 LambdaQueryWrapper<Patient> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(Patient::getAccountId, request.getAccountId());
+                wrapper.eq(Patient::getUserId, request.getUserId());
                 patient = patientMapper.selectOne(wrapper);
             }
             
             if (patient == null) {
                 response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("患者不存在");
+                response.setMessage("患者不存在, userid:" + request.getUserId());
                 return response;
             }
             
             // 查询账户信息
-            User user = userMapper.selectById(patient.getAccountId());
+            User user = userMapper.selectById(patient.getUserId());
             if (user == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("关联账户不存在");
@@ -134,8 +140,8 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
             response.setMessage("查询成功");
             response.setPatient(vo);
             
-            log.info("Get patient info success, patientId: {}, accountId: {}", 
-                    patient.getId(), patient.getAccountId());
+            log.info("Get patient info success, patientId: {}, userId: {}", 
+                    patient.getId(), patient.getUserId());
         } catch (Exception e) {
             log.error("Get patient info error", e);
             response.setCode(ToBCodeEnum.FAIL);
@@ -146,9 +152,55 @@ public class UserIdentityServiceImpl implements UserIdentityAPI {
     }
     
     @Override
-    public GetPatientInfoResponse getPatientInfoByAccountId(Long accountId) {
-        GetPatientInfoRequest request = new GetPatientInfoRequest();
-        request.setAccountId(accountId);
-        return getPatientInfo(request);
+    public GetPatientInfoResponse getPatientInfoByUserId(Long userId) {
+        return getPatientInfo(GetPatientInfoRequest
+                .builder()
+                .userId(userId)
+                .build());
+    }
+
+    @Override
+    public GetMyPatientsResponse getMyPatients(GetMyPatientsRequest request) {
+        // 1. 查询医生信息，验证医生身份
+        DoctorVO doctor = getDoctorInfoByUserId(request.getDoctorId()).getDoctor();
+        if (doctor == null) {
+            log.error("Get my patients failed, doctor not found, userId: {}", request.getDoctorId());
+            GetMyPatientsResponse response = new GetMyPatientsResponse();
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("医生不存在");
+            return response;
+        }
+
+        // 2. 创建 MyBatis-Plus 的分页对象
+        Page<Patient> page =
+                new Page<>(
+                        request.getPageNum(), request.getPageSize()
+                );
+
+        // 3. 构建查询条件
+        LambdaQueryWrapper<Patient> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Patient::getAttendingDoctorId, request.getDoctorId())
+                .orderByDesc(Patient::getCreateTime);
+        // 根据患者姓名进行模糊匹配
+        if(request.getPatientName() != null) {
+            wrapper.like(Patient::getUpdateTime, request.getPatientName());
+        }
+
+        // 4. 执行分页查询
+        Page<Patient> patientPage =
+                patientMapper.selectPage(page, wrapper);
+
+        // 5. 使用自定义 PageUtils 封装分页数据
+        PageUtils pageUtils = new PageUtils(patientPage);
+
+        // 6. 构建返回对象
+        GetMyPatientsResponse response = new GetMyPatientsResponse();
+        response.setCode(ToBCodeEnum.SUCCESS);
+        response.setMessage("查询成功");
+
+        // 7. 赋值
+        response.setPatients(pageUtils);
+
+        return response;
     }
 }

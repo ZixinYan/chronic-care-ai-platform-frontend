@@ -3,13 +3,16 @@ package com.zixin.healthcenterapi.dto;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
+
 /**
  * 查询健康报告列表请求
  * 
  * @author zixin
  */
 @Data
-public class QueryReportListRequest {
+public class QueryReportListRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 患者ID
      */

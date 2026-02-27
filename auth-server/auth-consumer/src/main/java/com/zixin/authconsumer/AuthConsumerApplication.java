@@ -13,12 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @ComponentScan(basePackages = {
-        "com.zixin",  // 扫描整个 com.zixin 包
-        "com.zixin.authconsumer",
-        "com.zixin.authconsumer.controller",
-        "com.zixin.authconsumer.service",
-        "com.zixin.authconsumer.config",
-        "com.zixin.authconsumer.client",
+        "com.zixin.*",
         "com.zixin.utils"
 })
 @SpringBootApplication

@@ -14,7 +14,7 @@ import java.util.Set;
 @Slf4j
 @Service
 public class PermissionClient {
-    @DubboReference(check = false)
+    @DubboReference(timeout = 50000)
     private PermissionServiceAPI permissionService;
 
     public Set<String> getPermissionsByUserId(Long userId) {

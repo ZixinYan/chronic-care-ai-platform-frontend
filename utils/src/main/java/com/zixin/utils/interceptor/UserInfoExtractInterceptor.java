@@ -5,12 +5,15 @@ import com.zixin.utils.context.UserInfoManager;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+
+import static com.zixin.utils.constant.HeaderConstant.*;
 
 /**
  * 用户信息拦截器
@@ -23,19 +26,6 @@ import java.util.List;
 @Component
 public class UserInfoExtractInterceptor implements HandlerInterceptor {
     
-    private static final String TRACE_ID = "X-Trace-Id";
-    private static final String USER_ID = "X-User-Id";
-    private static final String USERNAME = "X-Username";
-    private static final String USER_TYPE = "X-User-Type";
-    private static final String USER_ROLES = "X-User-Roles";
-    private static final String USER_AUTHORITIES = "X-User-Authorities";
-    private static final String REAL_NAME = "X-Real-Name";
-    private static final String NICKNAME = "X-Nickname";
-    private static final String PHONE = "X-Phone";
-    private static final String EMAIL = "X-Email";
-    private static final String ATTENDING_DOCTOR_ID = "X-Attending-Doctor-Id";
-    private static final String DEPARTMENT_ID = "X-Department-Id";
-    
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         try {
@@ -46,12 +36,15 @@ public class UserInfoExtractInterceptor implements HandlerInterceptor {
             String userTypeStr = request.getHeader(USER_TYPE);
             String roles = request.getHeader(USER_ROLES);
             String authorities = request.getHeader(USER_AUTHORITIES);
-            String realName = request.getHeader(REAL_NAME);
             String nickname = request.getHeader(NICKNAME);
             String phone = request.getHeader(PHONE);
             String email = request.getHeader(EMAIL);
             String attendingDoctorIdStr = request.getHeader(ATTENDING_DOCTOR_ID);
             String departmentIdStr = request.getHeader(DEPARTMENT_ID);
+
+            if (traceId != null && !traceId.isEmpty()) {
+                MDC.put("traceId", traceId);
+            }
             
             // 构建用户上下文
             UserInfoContext context = UserInfoContext.builder()
@@ -61,7 +54,6 @@ public class UserInfoExtractInterceptor implements HandlerInterceptor {
                     .userType(userTypeStr != null ? Integer.parseInt(userTypeStr) : null)
                     .roles(roles)
                     .authorities(authorities)
-                    .realName(realName)
                     .nickname(nickname)
                     .phone(phone)
                     .email(email)
@@ -70,11 +62,10 @@ public class UserInfoExtractInterceptor implements HandlerInterceptor {
                     .requestIp(getClientIp(request))
                     .requestTime(System.currentTimeMillis())
                     .build();
-            
             // 存储到ThreadLocal
             UserInfoManager.setUserContext(context);
             
-            log.debug("UserInfoExtractInterceptor - 用户信息已注入 - userId: {}, username: {}, traceId: {}", 
+            log.debug("UserInfoExtractInterceptor - 用户信息已注入 - userId: {}, username: {}, traceId: {}",
                     context.getUserId(), context.getUsername(), context.getTraceId());
             
         } catch (Exception e) {

@@ -1,9 +1,13 @@
 package com.zixin.utils.interceptor;
 
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.dubbo.common.constants.CommonConstants;
+import org.apache.dubbo.common.extension.Activate;
+import org.apache.dubbo.rpc.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -11,9 +15,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.logging.LogRecord;
+
+import static com.zixin.utils.constant.HeaderConstant.TRACE_ID;
 
 @Component
-public class TraceIdFilter extends OncePerRequestFilter {
+public class TraceIdFilter extends OncePerRequestFilter{
 
     private final Logger logger = LoggerFactory.getLogger(TraceIdFilter.class);
 
@@ -23,15 +30,16 @@ public class TraceIdFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws IOException, ServletException {
 
-        String traceId = request.getHeader("X-Trace-Id");
+        String traceId = request.getHeader(TRACE_ID);
         if (traceId != null) {
-            MDC.put("X-Trace-Id", traceId);
+            logger.info("TraceIdFilter - Extracted Trace ID from header: {}", traceId);
+            MDC.put(TRACE_ID, traceId);
         }
         try {
             logger.info("TraceIdFilter - X-Trace-Id: {}", traceId);
             filterChain.doFilter(request, response);
         } finally {
-            MDC.remove("X-Trace-Id");
+            MDC.remove(TRACE_ID);
         }
     }
 }

@@ -3,6 +3,8 @@ package com.zixin.messageconsumer.controller;
 import com.zixin.messageapi.api.MessageAPI;
 import com.zixin.messageapi.dto.*;
 import com.zixin.messageapi.vo.MessageVO;
+import com.zixin.utils.context.UserInfoManager;
+import com.zixin.utils.exception.ToBCodeEnum;
 import com.zixin.utils.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -35,19 +37,18 @@ public class MessageController {
      * 查询收件箱
      *
      * @param request 查询条件
-     * @param userId 用户ID(从Gateway注入)
      * @return 消息列表
      */
     @GetMapping("/inbox")
-    public Result<QueryMessageResponse> queryInbox(@ModelAttribute QueryMessageRequest request,
-                                                    @RequestHeader("X-User-Id") Long userId) {
+    public Result<?> queryInbox(@RequestBody QueryMessageRequest request) {
+        Long userId = UserInfoManager.getUserId();
         log.info("Query inbox request, userId: {}", userId);
         QueryMessageResponse response = messageAPI.queryInbox(userId, request);
         
-        if (response.getCode().name().equals("SUCCESS")) {
-            return Result.success(response);
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
+            return Result.success(response.getMessageList());
         } else {
-            return Result.error(response.getMessage());
+            return Result.error();
         }
     }
     
@@ -55,19 +56,18 @@ public class MessageController {
      * 查询发件箱
      *
      * @param request 查询条件
-     * @param userId 用户ID(从Gateway注入)
      * @return 消息列表
      */
     @GetMapping("/sent")
-    public Result<QueryMessageResponse> querySentBox(@ModelAttribute QueryMessageRequest request,
-                                                      @RequestHeader("X-User-Id") Long userId) {
+    public Result<?> querySentBox(@RequestBody QueryMessageRequest request) {
+        Long userId = UserInfoManager.getUserId();
         log.info("Query sent box request, userId: {}", userId);
         QueryMessageResponse response = messageAPI.querySentBox(userId, request);
         
-        if (response.getCode().name().equals("SUCCESS")) {
-            return Result.success(response);
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
+            return Result.success(response.getMessageList());
         } else {
-            return Result.error(response.getMessage());
+            return Result.error();
         }
     }
     
@@ -75,19 +75,18 @@ public class MessageController {
      * 获取消息详情
      *
      * @param messageId 消息ID
-     * @param userId 用户ID(从Gateway注入)
      * @return 消息详情
      */
     @GetMapping("/detail")
-    public Result<MessageVO> getMessageDetail(@RequestParam Long messageId,
-                                               @RequestHeader("X-User-Id") Long userId) {
+    public Result<MessageVO> getMessageDetail(@RequestParam("messageId") Long messageId) {
+        Long userId = UserInfoManager.getUserId();
         log.info("Get message detail request, messageId: {}, userId: {}", messageId, userId);
         GetMessageDetailResponse response = messageAPI.getMessageDetail(userId, messageId);
         
-        if (response.getCode().name().equals("SUCCESS")) {
-            return Result.success(response.getMessage());
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
+            return Result.success(response.getMessageVO());
         } else {
-            return Result.error(response.getMessage());
+            return Result.error();
         }
     }
     
@@ -95,19 +94,18 @@ public class MessageController {
      * 标记消息为已读
      *
      * @param messageId 消息ID
-     * @param userId 用户ID(从Gateway注入)
      * @return 操作结果
      */
     @PostMapping("/read")
-    public Result<Boolean> markAsRead(@RequestParam Long messageId,
-                                       @RequestHeader("X-User-Id") Long userId) {
+    public Result<Boolean> markAsRead(@RequestParam("messageId") Long messageId) {
+        Long userId = UserInfoManager.getUserId();
         log.info("Mark as read request, messageId: {}, userId: {}", messageId, userId);
         MarkAsReadResponse response = messageAPI.markAsRead(userId, messageId);
         
-        if (response.getCode().name().equals("SUCCESS")) {
-            return Result.success(response.getSuccess());
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
+            return Result.success();
         } else {
-            return Result.error(response.getMessage());
+            return Result.error();
         }
     }
     
@@ -115,19 +113,18 @@ public class MessageController {
      * 批量标记消息为已读
      *
      * @param messageIds 消息ID列表
-     * @param userId 用户ID(从Gateway注入)
      * @return 操作结果
      */
     @PostMapping("/batch-read")
-    public Result<Boolean> batchMarkAsRead(@RequestBody List<Long> messageIds,
-                                            @RequestHeader("X-User-Id") Long userId) {
+    public Result<Boolean> batchMarkAsRead(@RequestBody List<Long> messageIds) {
+        Long userId = UserInfoManager.getUserId();
         log.info("Batch mark as read request, userId: {}, count: {}", userId, messageIds.size());
         MarkAsReadResponse response = messageAPI.batchMarkAsRead(userId, messageIds);
         
-        if (response.getCode().name().equals("SUCCESS")) {
-            return Result.success(response.getSuccess());
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
+            return Result.success();
         } else {
-            return Result.error(response.getMessage());
+            return Result.error();
         }
     }
     
@@ -135,19 +132,18 @@ public class MessageController {
      * 删除消息
      *
      * @param messageId 消息ID
-     * @param userId 用户ID(从Gateway注入)
      * @return 操作结果
      */
     @PostMapping("/delete")
-    public Result<Boolean> deleteMessage(@RequestParam Long messageId,
-                                          @RequestHeader("X-User-Id") Long userId) {
+    public Result<Boolean> deleteMessage(@RequestParam("messageId") Long messageId) {
+        Long userId = UserInfoManager.getUserId();
         log.info("Delete message request, messageId: {}, userId: {}", messageId, userId);
         DeleteMessageResponse response = messageAPI.deleteMessage(userId, messageId);
         
-        if (response.getCode().name().equals("SUCCESS")) {
-            return Result.success(response.getSuccess());
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
+            return Result.success();
         } else {
-            return Result.error(response.getMessage());
+            return Result.error();
         }
     }
     
@@ -155,37 +151,35 @@ public class MessageController {
      * 批量删除消息
      *
      * @param messageIds 消息ID列表
-     * @param userId 用户ID(从Gateway注入)
      * @return 操作结果
      */
     @PostMapping("/batch-delete")
-    public Result<Boolean> batchDeleteMessage(@RequestBody List<Long> messageIds,
-                                               @RequestHeader("X-User-Id") Long userId) {
+    public Result<Boolean> batchDeleteMessage(@RequestBody List<Long> messageIds) {
+        Long userId = UserInfoManager.getUserId();
         log.info("Batch delete message request, userId: {}, count: {}", userId, messageIds.size());
         DeleteMessageResponse response = messageAPI.batchDeleteMessage(userId, messageIds);
         
-        if (response.getCode().name().equals("SUCCESS")) {
-            return Result.success(response.getSuccess());
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
+            return Result.success();
         } else {
-            return Result.error(response.getMessage());
+            return Result.error();
         }
     }
     
     /**
      * 获取未读消息数量
-     *
-     * @param userId 用户ID(从Gateway注入)
      * @return 未读数量
      */
     @GetMapping("/unread-count")
-    public Result<Long> getUnreadCount(@RequestHeader("X-User-Id") Long userId) {
+    public Result<Long> getUnreadCount() {
+        Long userId = UserInfoManager.getUserId();
         log.info("Get unread count request, userId: {}", userId);
         UnreadCountResponse response = messageAPI.getUnreadCount(userId);
         
-        if (response.getCode().name().equals("SUCCESS")) {
+        if (response.getCode().equals(ToBCodeEnum.SUCCESS)) {
             return Result.success(response.getUnreadCount());
         } else {
-            return Result.error(response.getMessage());
+            return Result.error();
         }
     }
 }

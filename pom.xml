@@ -30,6 +30,7 @@
         <module>message-system</module>
         <module>doctor-service</module>
         <module>health-report-center</module>
+        <module>blood-glucose-service</module>
     </modules>
 
     <dependencyManagement>

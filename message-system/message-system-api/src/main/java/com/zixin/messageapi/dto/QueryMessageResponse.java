@@ -2,9 +2,11 @@ package com.zixin.messageapi.dto;
 
 import com.zixin.messageapi.vo.MessageVO;
 import com.zixin.utils.utils.BaseResponse;
+import com.zixin.utils.utils.PageUtils;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -12,15 +14,10 @@ import java.util.List;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class QueryMessageResponse extends BaseResponse {
-    
+public class QueryMessageResponse extends BaseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 消息列表
      */
-    private List<MessageVO> messages;
-    
-    /**
-     * 总数量
-     */
-    private Long total;
+    private PageUtils messageList;
 }

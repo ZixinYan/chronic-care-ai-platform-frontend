@@ -3,8 +3,6 @@ package com.zixin.messageapi.po;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
-import java.util.Date;
-
 /**
  * 站内信实体类
  * 
@@ -46,7 +44,7 @@ public class Message {
     
     /**
      * 接收者ID
-     * 群发消息时,该字段为null,通过message_recipient表记录所有接收者
+     * 统一使用此字段，群发消息时为每个接收者创建一条记录
      */
     private Long receiverId;
     
@@ -54,6 +52,13 @@ public class Message {
      * 接收者名称
      */
     private String receiverName;
+    
+    /**
+     * 群发消息组ID
+     * 群发消息时使用，用于标识同一群发消息组的所有消息
+     * 个人消息时此字段为null
+     */
+    private Long groupMessageId;
     
     /**
      * 消息标题
@@ -82,23 +87,23 @@ public class Message {
     private Integer isBroadcast;
     
     /**
-     * 阅读时间
+     * 阅读时间(Unix毫秒时间戳)
      */
     private Long readTime;
     
     /**
-     * 撤回时间
+     * 撤回时间(Unix毫秒时间戳)
      */
     private Long revokeTime;
     
     /**
-     * 创建时间
+     * 创建时间(Unix毫秒时间戳)
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private Long createTime;
     
     /**
-     * 更新时间
+     * 更新时间(Unix毫秒时间戳)
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Long updateTime;

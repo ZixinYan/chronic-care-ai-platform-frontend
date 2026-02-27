@@ -14,4 +14,5 @@ public interface JwtAPI {
      * 刷新Token
      */
     RefreshTokenResponse refreshToken(RefreshTokenRequest refreshTokenRequest);
+
 }

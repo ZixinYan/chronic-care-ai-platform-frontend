@@ -2,8 +2,11 @@ package com.zixin.accountapi.po;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.zixin.utils.security.SensitiveDataEncryptHandler;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -17,7 +20,8 @@ import java.util.Date;
  */
 @Data
 @TableName("care_platform_patient")
-public class Patient {
+public class Patient implements Serializable {
+    private final static long serialVersionUID = 1L;
     
     /**
      * 患者ID (主键)
@@ -26,16 +30,26 @@ public class Patient {
     private Long id;
     
     /**
-     * 账户ID (关联account表的accountId)
+     * 账户ID
      */
-    private Long accountId;
+    private Long userId;
+
+    /**
+     * 姓名
+     */
+    private String username;
     
     /**
-     * 主治医生ID (关联doctor表的id)
+     * 主治医生ID
      * 用于健康报告权限控制等场景
      */
     private Long attendingDoctorId;
-    
+
+    /**
+     * 医生姓名
+     */
+    private String attendingDoctorName;
+
     /**
      * 病史摘要
      */
@@ -69,7 +83,7 @@ public class Patient {
     /**
      * 紧急联系人电话(加密存储)
      */
-    @TableField(typeHandler = com.zixin.utils.security.SensitiveDataEncryptHandler.class)
+    @TableField(typeHandler = SensitiveDataEncryptHandler.class)
     private String emergencyPhone;
     
     /**
@@ -100,5 +114,5 @@ public class Patient {
      * 扩展字段 (JSON格式)
      * 可以存储: 既往病史详情、用药记录等
      */
-    private JSON ext;
+    private String ext;
 }

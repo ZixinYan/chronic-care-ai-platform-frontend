@@ -2,13 +2,16 @@ package com.zixin.accountapi.vo;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 患者信息VO
  * 
  * 整合Account和Patient的信息
  */
 @Data
-public class PatientVO {
+public class PatientVO implements Serializable {
+    private static final long serialVersionUID = 1L;
     
     /**
      * 患者ID
@@ -18,7 +21,7 @@ public class PatientVO {
     /**
      * 账户ID
      */
-    private Long accountId;
+    private Long userId;
     
     /**
      * 主治医生ID

@@ -2,17 +2,22 @@ package com.zixin.healthcenterconsumer.controller;
 
 import com.zixin.healthcenterapi.api.HealthReportAPI;
 import com.zixin.healthcenterapi.dto.*;
+import com.zixin.healthcenterconsumer.client.OSSClient;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.BusinessException;
+import com.zixin.utils.exception.ToBCodeEnum;
 import com.zixin.utils.security.RequirePermission;
 import com.zixin.utils.security.RequireRole;
 import com.zixin.utils.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -32,7 +37,7 @@ import java.util.List;
 @Slf4j
 public class HealthReportController {
     
-    @DubboReference(version = "1.0.0", check = false)
+    @DubboReference(check = false)
     private HealthReportAPI healthReportAPI;
     
     /**
@@ -53,83 +58,52 @@ public class HealthReportController {
      * 文件大小限制 (10MB)
      */
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
-    
+
+    private final OSSClient ossClient;
+
+    public HealthReportController(OSSClient ossClient) {
+        this.ossClient = ossClient;
+    }
+
     /**
      * 上传健康报告
-     * 
      * 支持三种类型:
      * 1. 图片报告 (reportType=1, 需要file参数)
      * 2. 文字报告 (reportType=2, 需要textContent参数)
      * 3. PDF报告 (reportType=3, 需要file参数)
-     * 
-     * 权限要求:
-     * - 需要PATIENT角色
-     * - 需要health:report:write权限
-     * - 只能上传自己的报告
-     * 
-     * @param patientId 患者ID
-     * @param reportType 报告类型 (1-图片, 2-文字, 3-PDF)
-     * @param category 报告分类
-     * @param title 报告标题
-     * @param description 报告描述
-     * @param file 报告文件 (图片或PDF)
-     * @param textContent 文字内容
-     * @param reportDate 报告日期 (格式: yyyy-MM-dd)
-     * @param hospitalName 医疗机构名称
-     * @param request HTTP请求对象
      * @return 上传结果
      */
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RequireRole("PATIENT")
-    @RequirePermission("health:report:write")
     public Result<UploadReportResponse> uploadReport(
-            @RequestParam Long patientId,
-            @RequestParam Integer reportType,
-            @RequestParam(required = false) String category,
-            @RequestParam String title,
-            @RequestParam(required = false) String description,
-            @RequestParam(required = false) MultipartFile file,
-            @RequestParam(required = false) String textContent,
-            @RequestParam(required = false) String reportDate,
-            @RequestParam(required = false) String hospitalName,
-            HttpServletRequest request) {
-        
-        // 从ThreadLocal获取当前用户信息
+            @ModelAttribute  UploadReportRequest request,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
         Long currentUserId = UserInfoManager.getUserIdOrThrow();
         String traceId = UserInfoManager.getTraceId();
         String clientIp = UserInfoManager.getRequestIp();
-        
+
+        request.setUploaderId(UserInfoManager.getUserId());
         log.info("uploadReport - userId: {}, patientId: {}, reportType: {}, title: {}, ip: {}, traceId: {}", 
-                currentUserId, patientId, reportType, title, clientIp, traceId);
+                currentUserId, request.getPatientId(), request.getReportType(), request.getTitle(), clientIp, traceId);
         
-        // 1. 权限校验: 患者只能上传自己的报告
-        if (!patientId.equals(currentUserId)) {
-            log.warn("uploadReport - 权限拒绝: userId {} 尝试上传 patientId {} 的报告", currentUserId, patientId);
-            throw new BusinessException("无权上传他人报告");
-        }
-        
-        // 2. 文件安全校验
+        // 1. 文件上传
+        String fileUrl = null;
         if (file != null && !file.isEmpty()) {
-            validateFile(file, reportType);
+            fileUrl = ossClient.uploadFile(file);
         }
+
+        if(fileUrl == null && (request.getReportType() == 1 || request.getReportType() == 3)) {
+            log.error("uploadReport - 文件上传失败, reportType: {}, title: {}, traceId: {}",
+                    request.getReportType(), request.getTitle(), traceId);
+            throw new BusinessException("文件上传失败");
+        }
+        request.setFileUrl(fileUrl);
+
+        // 2. 调用Dubbo服务
+        UploadReportResponse response = healthReportAPI.uploadReport(request);
         
-        // 3. 构建请求
-        UploadReportRequest uploadRequest = new UploadReportRequest();
-        uploadRequest.setUploaderId(currentUserId);  // 设置上传者ID
-        uploadRequest.setPatientId(patientId);
-        uploadRequest.setReportType(reportType);
-        uploadRequest.setCategory(category);
-        uploadRequest.setTitle(title);
-        uploadRequest.setDescription(description);
-        uploadRequest.setFile(file);
-        uploadRequest.setTextContent(textContent);
-        uploadRequest.setReportDate(reportDate);
-        uploadRequest.setHospitalName(hospitalName);
-        
-        // 4. 调用Dubbo服务
-        UploadReportResponse response = healthReportAPI.uploadReport(uploadRequest);
-        
-        if ("SUCCESS".equals(response.getCode().name())) {
+        if (ToBCodeEnum.SUCCESS.equals(response.getCode())) {
             return Result.success(response);
         } else {
             throw new BusinessException(response.getMessage());
@@ -143,8 +117,7 @@ public class HealthReportController {
      * - 需要PATIENT角色
      * - 需要health:report:read权限
      * - 患者只能查看自己的报告
-     * 
-     * @param patientId 患者ID (必填)
+     *
      * @param reportType 报告类型 (可选)
      * @param category 报告分类 (可选)
      * @param status 审核状态 (可选)
@@ -154,27 +127,20 @@ public class HealthReportController {
      */
     @GetMapping("/list")
     @RequireRole("PATIENT")
-    @RequirePermission("health:report:read")
     public Result<QueryReportListResponse> queryReportList(
-            @RequestParam Long patientId,
-            @RequestParam(required = false) Integer reportType,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize) {
+            @RequestParam(required = false, value = "reportType") Integer reportType,
+            @RequestParam(required = false, value = "category") String category,
+            @RequestParam(required = false, value = "status") Integer status,
+            @RequestParam(defaultValue = "1", value = "pageNum") Integer pageNum,
+            @RequestParam(defaultValue = "10", value = "pageSize") Integer pageSize) {
         
         // 从ThreadLocal获取当前用户信息
-        Long currentUserId = UserInfoManager.getUserIdOrThrow();
+        Long patientId = UserInfoManager.getUserIdOrThrow();
         String traceId = UserInfoManager.getTraceId();
         
-        log.info("queryReportList - userId: {}, patientId: {}, pageNum: {}, pageSize: {}, traceId: {}", 
-                currentUserId, patientId, pageNum, pageSize, traceId);
-        
-        // 权限校验: 患者只能查看自己的报告
-        if (!patientId.equals(currentUserId)) {
-            log.warn("queryReportList - 权限拒绝: userId {} 尝试查看 patientId {} 的报告", currentUserId, patientId);
-            throw new BusinessException("无权查看他人报告");
-        }
+        log.info("queryReportList - patientId: {}, pageNum: {}, pageSize: {}, traceId: {}"
+                , patientId, pageNum, pageSize, traceId);
+
         
         // 构建请求
         QueryReportListRequest queryRequest = new QueryReportListRequest();
@@ -188,7 +154,7 @@ public class HealthReportController {
         // 调用Dubbo服务
         QueryReportListResponse response = healthReportAPI.queryReportList(queryRequest);
         
-        if ("SUCCESS".equals(response.getCode().name())) {
+        if (ToBCodeEnum.SUCCESS.equals(response.getCode())) {
             return Result.success(response);
         } else {
             throw new BusinessException(response.getMessage());
@@ -200,7 +166,6 @@ public class HealthReportController {
      * 
      * 权限要求:
      * - 需要PATIENT角色
-     * - 需要health:report:read权限
      * - 只能查看自己的报告详情
      * 
      * @param reportId 报告ID
@@ -208,8 +173,7 @@ public class HealthReportController {
      */
     @GetMapping("/detail")
     @RequireRole("PATIENT")
-    @RequirePermission("health:report:read")
-    public Result<GetReportDetailResponse> getReportDetail(@RequestParam Long reportId) {
+    public Result<GetReportDetailResponse> getReportDetail(@RequestParam(value = "reportId") Long reportId) {
         // 从ThreadLocal获取当前用户信息
         Long currentUserId = UserInfoManager.getUserIdOrThrow();
         String traceId = UserInfoManager.getTraceId();

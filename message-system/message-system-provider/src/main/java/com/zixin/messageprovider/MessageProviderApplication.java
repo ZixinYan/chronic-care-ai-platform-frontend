@@ -4,6 +4,8 @@ import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.context.annotation.ComponentScan;
 
 /**
  * 站内信系统Provider启动类
@@ -11,6 +13,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 @EnableDubbo
 @MapperScan("com.zixin.messageprovider.mapper")
+@EnableDiscoveryClient
+@ComponentScan(basePackages = {"com.zixin.messageprovider", "com.zixin.utils.*"})
 public class MessageProviderApplication {
     
     public static void main(String[] args) {

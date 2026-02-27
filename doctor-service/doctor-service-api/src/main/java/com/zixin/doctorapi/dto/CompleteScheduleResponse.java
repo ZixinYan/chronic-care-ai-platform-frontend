@@ -6,12 +6,15 @@ import com.zixin.utils.utils.BaseResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
+
 /**
  * 完成日程响应
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class CompleteScheduleResponse extends BaseResponse {
+public class CompleteScheduleResponse extends BaseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     
     /**
      * 更新后的日程信息

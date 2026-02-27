@@ -1,37 +1,44 @@
 package com.zixin.healthcenterprovider.service;
 
-import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.zixin.accountapi.api.UserIdentityAPI;
-import com.zixin.accountapi.dto.GetDoctorInfoRequest;
-import com.zixin.accountapi.dto.GetDoctorInfoResponse;
-import com.zixin.accountapi.dto.GetPatientInfoRequest;
-import com.zixin.accountapi.dto.GetPatientInfoResponse;
+import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountapi.vo.PatientVO;
+import com.zixin.doctorapi.enums.ScheduleCategory;
+import com.zixin.doctorapi.enums.SchedulePriority;
+import com.zixin.doctorapi.enums.ScheduleStatus;
+import com.zixin.doctorapi.vo.ScheduleVO;
 import com.zixin.healthcenterapi.api.HealthReportAPI;
 import com.zixin.healthcenterapi.dto.*;
 import com.zixin.healthcenterapi.enums.ReportStatus;
 import com.zixin.healthcenterapi.enums.ReportType;
 import com.zixin.healthcenterapi.po.HealthReport;
 import com.zixin.healthcenterapi.vo.HealthReportVO;
+import com.zixin.healthcenterprovider.client.DoctorClient;
+import com.zixin.healthcenterprovider.client.MessageClient;
+import com.zixin.healthcenterprovider.client.UserIdentityClient;
 import com.zixin.healthcenterprovider.mapper.HealthReportMapper;
-import com.zixin.thirdpartyapi.api.OSSAPI;
-import com.zixin.thirdpartyapi.dto.OSSUploadFileRequest;
-import com.zixin.thirdpartyapi.dto.OSSUploadFileResponse;
+import com.zixin.messageapi.dto.SendMessageRequest;
+import com.zixin.messageapi.enums.MessageType;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StopWatch;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 健康报告服务实现
@@ -49,94 +56,76 @@ import java.util.List;
 public class HealthReportServiceImpl implements HealthReportAPI {
     
     private final HealthReportMapper healthReportMapper;
+    private final MessageClient messageClient;
+    private final UserIdentityClient userIdentityClient;
+    private final DoctorClient doctorClient;
+    private final TransactionTemplate transactionTemplate;
     
-    @DubboReference(check = false)
-    private OSSAPI ossAPI;
-    
-    @DubboReference(check = false)
-    private UserIdentityAPI userIdentityAPI;
-    
-    public HealthReportServiceImpl(HealthReportMapper healthReportMapper) {
+    public HealthReportServiceImpl(HealthReportMapper healthReportMapper,
+                                   MessageClient messageClient,
+                                   UserIdentityClient userIdentityClient, DoctorClient doctorClient, TransactionTemplate transactionTemplate) {
         this.healthReportMapper = healthReportMapper;
+        this.messageClient = messageClient;
+        this.userIdentityClient = userIdentityClient;
+        this.doctorClient = doctorClient;
+        this.transactionTemplate = transactionTemplate;
     }
-    
+
     @Override
     public UploadReportResponse uploadReport(UploadReportRequest request) {
         StopWatch sw = new StopWatch("uploadReport");
         sw.start("参数校验");
-        
+
         UploadReportResponse response = new UploadReportResponse();
-        
+
         try {
             // 1. 参数校验
             if (request.getPatientId() == null) {
+                // 如果没有传patientId，默认使用当前登录用户ID
+                request.setPatientId(UserInfoManager.getUserId());
+            }
+
+            final PatientVO patient = userIdentityClient.getPatientInfo(request.getPatientId());
+            if (patient == null) {
                 response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("患者ID不能为空");
+                response.setMessage("患者不存在");
                 return response;
             }
-            
+
             if (request.getReportType() == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("报告类型不能为空");
                 return response;
             }
-            
+
             ReportType reportType = ReportType.fromCode(request.getReportType());
             if (reportType == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("无效的报告类型");
                 return response;
             }
-            
+
             sw.stop();
-            log.info("uploadReport - 参数校验完成, patientId: {}, reportType: {}", 
+            log.info("uploadReport - 参数校验完成, patientId: {}, reportType: {}",
                     request.getPatientId(), reportType.getDescription());
-            
+
             // 2. 获取患者信息(包含主治医生ID)
-            sw.start("查询患者信息");
-            GetPatientInfoRequest patientRequest = new GetPatientInfoRequest();
-            patientRequest.setPatientId(request.getPatientId());
-            GetPatientInfoResponse patientResponse = userIdentityAPI.getPatientInfo(patientRequest);
-            
-            if (!"SUCCESS".equals(patientResponse.getCode().name())) {
+            if (patient == null) {
                 response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("患者信息查询失败: " + patientResponse.getMessage());
+                response.setMessage("患者信息查询失败");
                 return response;
             }
-            
-            PatientVO patient = patientResponse.getPatient();
-            sw.stop();
-            log.info("uploadReport - 患者信息查询成功, patientId: {}, patientName: {}, attendingDoctorId: {}", 
-                    patient.getId(), patient.getNickname(), patient.getAttendingDoctorId());
-            
-            // 3. 处理文件上传(图片或PDF类型)
-            String fileUrl = null;
-            if (reportType == ReportType.IMAGE || reportType == ReportType.PDF) {
-                sw.start("文件上传OSS");
-                
-                if (request.getFile() == null || request.getFile().isEmpty()) {
-                    response.setCode(ToBCodeEnum.FAIL);
-                    response.setMessage("报告文件不能为空");
-                    return response;
-                }
-                
-                // 调用OSS上传服务
-                OSSUploadFileRequest ossRequest = new OSSUploadFileRequest();
-                ossRequest.setFile(request.getFile());
-                
-                OSSUploadFileResponse ossResponse = ossAPI.uploadFile(ossRequest);
-                
-                if (!"SUCCESS".equals(ossResponse.getCode().name())) {
-                    response.setCode(ToBCodeEnum.FAIL);
-                    response.setMessage("文件上传失败: " + ossResponse.getMessage());
-                    return response;
-                }
-                
-                fileUrl = ossResponse.getUrl();
-                sw.stop();
-                log.info("uploadReport - 文件上传成功, fileUrl: {}", fileUrl);
+
+            final DoctorVO doctor = userIdentityClient.getDoctorInfo(patient.getAttendingDoctorId());
+            if (doctor == null) {
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("医生信息查询失败");
+                return response;
             }
-            
+
+            // 3. 处理文件上传(图片或PDF类型) - 放在事务外执行
+            final String fileUrl = request.getFileUrl();
+
             // 4. 文字类型报告校验
             if (reportType == ReportType.TEXT) {
                 if (request.getTextContent() == null || request.getTextContent().trim().isEmpty()) {
@@ -145,59 +134,122 @@ public class HealthReportServiceImpl implements HealthReportAPI {
                     return response;
                 }
             }
-            
-            // 5. 构建报告实体
-            sw.start("保存报告数据");
-            HealthReport report = new HealthReport();
-            report.setPatientId(request.getPatientId());
-            report.setAttendingDoctorId(patient.getAttendingDoctorId());
-            report.setReportType(request.getReportType());
-            report.setCategory(request.getCategory());
-            report.setTitle(request.getTitle());
-            report.setDescription(request.getDescription());
-            report.setFileUrl(fileUrl);
-            report.setTextContent(request.getTextContent());
-            
-            // 解析报告日期
-            if (request.getReportDate() != null && !request.getReportDate().isEmpty()) {
+
+            // 5. 构建排班VO（提前构建）
+            ScheduleVO scheduleVO = buildScheduleVO(
+                    patient,
+                    doctor,
+                    ScheduleStatus.PENDING,
+                    SchedulePriority.HIGH,
+                    ScheduleCategory.ONLINE_APPROVAL.getCode(),
+                    ScheduleCategory.ONLINE_APPROVAL.getName(),
+                    fileUrl
+            );
+
+            // 供事务内部使用的final变量
+
+            // 6. 使用事务管理数据库操作和排班添加
+            Boolean transactionResult = transactionTemplate.execute(new TransactionCallback<Boolean>() {
+                @Override
+                public Boolean doInTransaction(TransactionStatus status) {
+                    try {
+                        // 6.1 构建报告实体
+                        HealthReport report = new HealthReport();
+                        report.setPatientId(request.getPatientId());
+                        report.setAttendingDoctorId(patient.getAttendingDoctorId());
+                        report.setReportType(request.getReportType());
+                        report.setCategory(request.getCategory());
+                        report.setTitle(request.getTitle());
+                        report.setDescription(request.getDescription());
+                        report.setFileUrl(fileUrl);
+                        report.setTextContent(request.getTextContent());
+                        report.setReportDate(request.getReportDate());
+                        report.setUploaderId(request.getUploaderId());
+                        report.setUploaderName(patient.getNickname());
+                        report.setHospitalName(request.getHospitalName());
+                        report.setStatus(ReportStatus.PENDING.getCode());
+
+                        // 6.2 保存到数据库
+                        int rows = healthReportMapper.insert(report);
+
+                        if (rows <= 0) {
+                            log.error("uploadReport - 报告保存失败, patientId: {}", request.getPatientId());
+                            status.setRollbackOnly();
+                            response.setCode(ToBCodeEnum.FAIL);
+                            response.setMessage("报告保存失败");
+                            return false;
+                        }
+
+                        // 6.3 同步添加排班
+                        if (patient.getAttendingDoctorId() != null) {
+                            boolean scheduleSuccess = doctorClient.addSchedule(
+                                    doctor.getUserId(),
+                                    patient.getUserId(),
+                                    doctor.getUsername(),
+                                    scheduleVO
+                            );
+
+                            if (!scheduleSuccess) {
+                                log.error("uploadReport - 添加排班失败, doctorId: {}", patient.getAttendingDoctorId());
+                                status.setRollbackOnly();
+                                response.setCode(ToBCodeEnum.FAIL);
+                                response.setMessage("添加排班失败");
+                                return false;
+                            }
+
+                            log.info("uploadReport - 排班添加成功, doctorId: {}", patient.getAttendingDoctorId());
+                        }
+
+                        // 6.4 设置成功响应
+                        response.setCode(ToBCodeEnum.SUCCESS);
+                        response.setMessage("报告上传成功");
+                        response.setReportId(report.getReportId());
+                        response.setFileUrl(fileUrl);
+
+                        return true;
+
+                    } catch (Exception e) {
+                        log.error("uploadReport - 事务执行异常", e);
+                        status.setRollbackOnly();
+                        response.setCode(ToBCodeEnum.FAIL);
+                        response.setMessage("事务执行异常: " + e.getMessage());
+                        return false;
+                    }
+                }
+            });
+
+            // 7. 事务成功后，异步发送消息（非事务性，失败不影响主流程）
+            if (Boolean.TRUE.equals(transactionResult) && patient.getAttendingDoctorId() != null) {
+                    // 异步发送消息
                 try {
-                    Date reportDate = DateUtil.parseDate(request.getReportDate());
-                    report.setReportDate(reportDate);
+                    messageClient.sendMessageAsync(
+                            patient.getUserId(),
+                            SendMessageRequest.builder()
+                                    .receiverId(patient.getAttendingDoctorId())
+                                    .messageType(MessageType.SYSTEM.getCode())
+                                    .title("新健康报告上传通知")
+                                    .senderName(UserInfoManager.getUsername())
+                                    .content("患者 " + patient.getUsername() + " 上传了新的健康报告，请及时查看。")
+                                    .build()
+                    );
+                    log.info("uploadReport - 消息发送成功, doctorId: {}", patient.getAttendingDoctorId());
                 } catch (Exception e) {
-                    log.warn("uploadReport - 报告日期解析失败, reportDate: {}", request.getReportDate());
+                    // 只记录日志，不影响主流程
+                    log.error("uploadReport - 消息发送失败, doctorId: {}, error: {}",
+                            patient.getAttendingDoctorId(), e.getMessage(), e);
                 }
             }
-            
-            report.setUploaderId(request.getUploaderId());
-            report.setUploaderName(patient.getNickname());
-            report.setHospitalName(request.getHospitalName());
-            report.setStatus(ReportStatus.PENDING.getCode());
-            
-            // 6. 保存到数据库
-            int rows = healthReportMapper.insert(report);
-            sw.stop();
-            
-            if (rows > 0) {
-                response.setCode(ToBCodeEnum.SUCCESS);
-                response.setMessage("报告上传成功");
-                response.setReportId(report.getReportId());
-                response.setFileUrl(fileUrl);
-                
-                log.info("uploadReport - 报告上传成功, reportId: {}, patientId: {}, 耗时统计: {}", 
-                        report.getReportId(), request.getPatientId(), sw.prettyPrint());
-            } else {
-                response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("报告保存失败");
-                log.error("uploadReport - 报告保存失败, patientId: {}", request.getPatientId());
-            }
-            
+
+            log.info("uploadReport - 报告上传完成, reportId: {}, patientId: {}, 耗时统计:\n{}",
+                    response.getReportId(), request.getPatientId(), sw.prettyPrint());
+
         } catch (Exception e) {
-            log.error("uploadReport - 报告上传异常, patientId: {}, error: {}", 
+            log.error("uploadReport - 报告上传异常, patientId: {}, error: {}",
                     request.getPatientId(), e.getMessage(), e);
             response.setCode(ToBCodeEnum.FAIL);
             response.setMessage("报告上传异常: " + e.getMessage());
         }
-        
+
         return response;
     }
     
@@ -296,7 +348,7 @@ public class HealthReportServiceImpl implements HealthReportAPI {
 
             // 3. 权限校验: 只能查看自己的报告
             Long currentUserId = UserInfoManager.getUserIdOrThrow();
-            if (request.getReportId() != null && !report.getPatientId().equals(currentUserId)) {
+            if (!report.getPatientId().equals(currentUserId)) {
                 log.warn("getReportDetail - 权限拒绝: userId {} 尝试查看 patientId {} 的报告 {}", 
                         currentUserId, report.getPatientId(), request.getReportId());
                 response.setCode(ToBCodeEnum.FAIL);
@@ -323,7 +375,64 @@ public class HealthReportServiceImpl implements HealthReportAPI {
         
         return response;
     }
-    
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ProcessReportResponse processReport(ProcessReportRequest request) {
+        ProcessReportResponse response = new ProcessReportResponse();
+        log.info("processReport - 处理报告请求, reportId: {}, result: {}, auditMark: {}",
+                request.getReportId(), request.getResult(), request.getComment());
+        // 1. 获取报告详情
+        HealthReport healthReport = healthReportMapper.selectById(request.getReportId());
+        if (healthReport == null) {
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("报告不存在");
+            return response;
+        }
+        int version = healthReport.getVersion();
+        if(!Objects.equals(healthReport.getStatus(), ReportStatus.PENDING.getCode())){
+            log.warn("processReport - 报告状态异常, reportId: {}, currentStatus: {}, expectedStatus: {}",
+                    request.getReportId(), healthReport.getStatus(), ReportStatus.PENDING.getCode());
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("报告已被处理");
+            return response;
+        }
+        // 2. 更新报告状态
+        int status = ReportStatus.fromCode(request.getResult()).getCode();
+        healthReport.setStatus(status);
+        healthReport.setAuditRemark(request.getComment());
+        // 3. 乐观锁更新
+        int rows = healthReportMapper.updateById(healthReport);
+        if (rows <= 0) {
+            log.warn("processReport - 更新失败, reportId: {}, version: {}", request.getReportId(), version);
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("处理失败");
+            return response;
+        }
+        response.setCode(ToBCodeEnum.SUCCESS);
+        response.setMessage("处理成功");
+        // 4. 处理完成后，发送消息通知患者
+        try {
+            messageClient.sendMessageAsync(
+                    UserInfoManager.getUserId(),
+                    SendMessageRequest.builder()
+                            .receiverId(healthReport.getPatientId())
+                            .messageType(MessageType.SYSTEM.getCode())
+                            .title("健康报告处理结果通知")
+                            .senderName(UserInfoManager.getUsername())
+                            .content("您的健康报告 '" + healthReport.getTitle() + "' 已经被处理，处理结果: "
+                                    + ReportStatus.fromCode(request.getResult()).getDescription()
+                                    + (request.getComment() != null ? "，备注: " + request.getComment() : ""))
+                            .build()
+            );
+            log.info("processReport - 消息发送成功, patientId: {}", healthReport.getPatientId());
+        } catch (Exception e) {
+            log.error("processReport - 消息发送失败, patientId: {}, error: {}",
+                    healthReport.getPatientId(), e.getMessage(), e);
+        }
+        return response;
+    }
+
     /**
      * 将实体转换为VO
      */
@@ -343,32 +452,24 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             vo.setStatusDesc(status.getDescription());
         }
         
-        // 查询患者姓名
+        // 查询患者姓名(使用userId)
         if (report.getPatientId() != null) {
             try {
-                GetPatientInfoRequest patientRequest = new GetPatientInfoRequest();
-                patientRequest.setPatientId(report.getPatientId());
-                GetPatientInfoResponse patientResponse = userIdentityAPI.getPatientInfo(patientRequest);
-                
-                if (ToBCodeEnum.SUCCESS.equals(patientResponse.getCode()) 
-                        && patientResponse.getPatient() != null) {
-                    vo.setPatientName(patientResponse.getPatient().getNickname());
+                PatientVO patient = userIdentityClient.getPatientInfo(report.getPatientId());
+                if (patient != null) {
+                    vo.setPatientName(patient.getNickname());
                 }
             } catch (Exception e) {
                 log.warn("Failed to get patient name, patientId: {}", report.getPatientId(), e);
             }
         }
         
-        // 查询医生姓名
+        // 查询医生姓名(使用userId)
         if (report.getAttendingDoctorId() != null) {
             try {
-                GetDoctorInfoRequest doctorRequest = new GetDoctorInfoRequest();
-                doctorRequest.setDoctorId(report.getAttendingDoctorId());
-                GetDoctorInfoResponse doctorResponse = userIdentityAPI.getDoctorInfo(doctorRequest);
-                
-                if (ToBCodeEnum.SUCCESS.equals(doctorResponse.getCode()) 
-                        && doctorResponse.getDoctor() != null) {
-                    vo.setDoctorName(doctorResponse.getDoctor().getNickname());
+                com.zixin.accountapi.vo.DoctorVO doctor = userIdentityClient.getDoctorInfo(report.getAttendingDoctorId());
+                if (doctor != null) {
+                    vo.setDoctorName(doctor.getNickname());
                 }
             } catch (Exception e) {
                 log.warn("Failed to get doctor name, doctorId: {}", report.getAttendingDoctorId(), e);
@@ -376,5 +477,45 @@ public class HealthReportServiceImpl implements HealthReportAPI {
         }
         
         return vo;
+    }
+
+    private ScheduleVO buildScheduleVO(PatientVO patient, DoctorVO doctor,
+                                       ScheduleStatus status,
+                                       SchedulePriority priority,
+                                       Integer category,
+                                       String categoryName,
+                                       String link) {
+        ScheduleVO scheduleVO = new ScheduleVO();
+
+        // 基础信息
+        scheduleVO.setSchedule("查看患者 " + patient.getUsername() + " 的诊断报告");
+        scheduleVO.setDoctorName(doctor.getUsername());
+        scheduleVO.setPatientName(patient.getUsername());
+
+        // 状态设置
+        scheduleVO.setStatus(status.getCode());
+        scheduleVO.setStatusDesc(status.getDescription());
+
+        // 优先级设置
+        scheduleVO.setPriority(priority.getCode());
+        scheduleVO.setPriorityDesc(priority.getDescription());
+
+        // 分类设置
+        scheduleVO.setScheduleCategory(category);
+        scheduleVO.setScheduleCategoryName(categoryName);
+
+        scheduleVO.setLink(link);
+
+        // 时间设置（默认今天0点到明天0点）
+        setDefaultTimeRange(scheduleVO);
+
+        return scheduleVO;
+    }
+
+    private void setDefaultTimeRange(ScheduleVO scheduleVO) {
+        LocalDate today = LocalDate.now();
+        scheduleVO.setScheduleDay(today.format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+        scheduleVO.setStartTime(today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
+        scheduleVO.setEndTime(today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
     }
 }

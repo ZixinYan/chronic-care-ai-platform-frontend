@@ -11,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jwt.Jwt;
 
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -128,11 +130,12 @@ public class JwtServiceImpl implements JwtAPI {
                 log.warn("Invalid refresh token provided");
                 return response;
             }
-
+            Jwt jwt = jwtUtils.validateAndParseToken(request.getRefreshToken());
             // 3. 从旧的Refresh Token中提取角色信息和用户名
-            List<String> roles = jwtUtils.getRolesFromToken(request.getRefreshToken());
-            String username = jwtUtils.getUsernameFromToken(request.getRefreshToken());
-            
+            List<String> roles = jwt.getClaim("roles");
+            String username = jwt.getClaim("username");
+            String tokenId = jwt.getId();
+            Instant expiration = jwt.getExpiresAt();
             // 4. 重新从数据库加载最新的权限信息
             Set<String> permissions = jwtUtils.loadAndCacheUserAuthorities(userId);
 
@@ -141,7 +144,11 @@ public class JwtServiceImpl implements JwtAPI {
             String newAccessToken = tokens.get("accessToken");
             String newRefreshToken = tokens.get("refreshToken");
 
-            // 6. 验证生成结果
+            // 6. 删除旧的Refresh Token，防止重复使用
+            jwtUtils.revokeRefreshToken(userId, tokenId);
+            jwtUtils.blacklistToken(tokenId, expiration);
+
+            // 7. 验证生成结果
             if (newAccessToken == null || newAccessToken.isEmpty() || 
                 newRefreshToken == null || newRefreshToken.isEmpty()) {
                 response.setCode(ToBCodeEnum.FAIL);
@@ -150,7 +157,7 @@ public class JwtServiceImpl implements JwtAPI {
                 return response;
             }
 
-            // 7. 构造响应
+            // 8. 构造响应
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("Token refreshed successfully");
             response.setAccessToken(newAccessToken);

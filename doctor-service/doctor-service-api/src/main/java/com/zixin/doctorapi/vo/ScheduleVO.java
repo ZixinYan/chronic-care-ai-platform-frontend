@@ -2,42 +2,30 @@ package com.zixin.doctorapi.vo;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 日程VO
  */
 @Data
-public class ScheduleVO {
-    
+public class ScheduleVO implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
-     * 日程ID
+     * 日程id
      */
     private Long id;
-    
-    /**
-     * 医生ID
-     */
-    private Long doctorId;
-    
     /**
      * 医生姓名
      */
     private String doctorName;
-    
-    /**
-     * 患者ID
-     */
-    private Long patientId;
-    
     /**
      * 患者姓名
      */
     private String patientName;
-    
     /**
      * 日程内容
      */
     private String schedule;
-    
     /**
      * 日程类别ID
      */
@@ -77,4 +65,18 @@ public class ScheduleVO {
      * 执行结果
      */
     private String result;
+
+    /**
+     * 关联链接
+     */
+    private String link;
+
+    /**
+     * 开始时间
+     */
+    private Long startTime;
+    /**
+     * 结束时间
+     */
+    private Long endTime;
 }

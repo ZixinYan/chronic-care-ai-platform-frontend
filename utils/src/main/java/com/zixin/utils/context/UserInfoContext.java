@@ -52,11 +52,6 @@ public class UserInfoContext {
     private Integer userType;
     
     /**
-     * 真实姓名
-     */
-    private String realName;
-    
-    /**
      * 昵称
      */
     private String nickname;

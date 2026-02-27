@@ -8,7 +8,7 @@ import lombok.Getter;
 @Getter
 public enum ToBCodeEnum {
     SUCCESS(0, "成功"),
-    FAIL(1, "失败");
+    FAIL(1, "请稍后重试");
 
     private final int code;
     private final String message;

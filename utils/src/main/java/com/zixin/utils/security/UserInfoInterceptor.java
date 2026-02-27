@@ -7,6 +7,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import static com.zixin.utils.constant.HeaderConstant.*;
+
 /**
  * 用户信息拦截器 (已废弃)
  * 
@@ -25,13 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 @Deprecated
 public class UserInfoInterceptor implements HandlerInterceptor {
-
-    // 请求头名称常量
-    protected static final String HEADER_TRACE_ID = "X-Trace-Id";
-    protected static final String HEADER_USER_ID = "X-User-Id";
-    protected static final String HEADER_USER_ROLES = "X-User-Roles";
-    protected static final String HEADER_USER_AUTHORITIES = "X-User-Authorities";
-    protected static final String HEADER_USERNAME = "X-Username";
+    
 
     /**
      * 线程本地变量，用于存储当前请求的用户信息
@@ -44,11 +40,11 @@ public class UserInfoInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         try {
             // 从请求头提取用户信息
-            String traceId = request.getHeader(HEADER_TRACE_ID);
-            String userIdStr = request.getHeader(HEADER_USER_ID);
-            String username = request.getHeader(HEADER_USERNAME);
-            String roles = request.getHeader(HEADER_USER_ROLES);
-            String authorities = request.getHeader(HEADER_USER_AUTHORITIES);
+            String traceId = request.getHeader(TRACE_ID);
+            String userIdStr = request.getHeader(USER_ID);
+            String username = request.getHeader(USERNAME);
+            String roles = request.getHeader(USER_ROLES);
+            String authorities = request.getHeader(USER_AUTHORITIES);
 
             if (userIdStr != null && !userIdStr.isEmpty()) {
                 try {

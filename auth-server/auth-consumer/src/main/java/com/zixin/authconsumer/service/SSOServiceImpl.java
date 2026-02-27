@@ -73,7 +73,8 @@ public class SSOServiceImpl implements LoginWithPhoneAPI {
             GenTokenRequest genTokenRequest = new GenTokenRequest();
             genTokenRequest.setUserId(userId);
             genTokenRequest.setUsername(username);
-            genTokenRequest.setRoles(roleNames);  // 使用转换后的角色名称
+            genTokenRequest.setRoles(roleNames);
+            genTokenRequest.setPermissions(permissions);
 
             GenTokenResponse tokenResponse = authClient.generateToken(genTokenRequest);
             if (tokenResponse.getCode() != ToBCodeEnum.SUCCESS) {
@@ -133,10 +134,16 @@ public class SSOServiceImpl implements LoginWithPhoneAPI {
     @Override
     public Result register(RegisterRequest registerRequest) {
         // 1. 调用account服务进行注册
-        RegisterResponse response = accountClient.register(registerRequest);
-        if (response.getCode() != ToBCodeEnum.SUCCESS) {
-            log.error("Account registration failed: {}", response.getMessage());
-            return Result.error(response.getMessage());
+        RegisterResponse response;
+        try {
+            response = accountClient.register(registerRequest);
+            if (response.getCode() != ToBCodeEnum.SUCCESS) {
+                log.error("Account registration failed: {}", response.getMessage());
+                return Result.error(response.getMessage());
+            }
+        } catch (Exception e) {
+            log.error("Account registration failed with exception", e);
+            return Result.error("Account registration failed: " + e.getMessage());
         }
         return Result.success().setData(response);
     }

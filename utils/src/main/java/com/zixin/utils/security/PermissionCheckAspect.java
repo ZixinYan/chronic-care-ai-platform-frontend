@@ -37,7 +37,8 @@ public class PermissionCheckAspect {
         // 获取方法签名
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
-        
+        log.info("Checking permissions for method: {}.{}",
+                method.getDeclaringClass().getSimpleName(), method.getName());
         // 获取注解
         RequirePermission annotation = method.getAnnotation(RequirePermission.class);
         if (annotation == null) {
@@ -51,7 +52,7 @@ public class PermissionCheckAspect {
                     method.getDeclaringClass().getSimpleName(), method.getName());
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: No authorities");
         }
-        
+        log.info("User authorities: {}", authoritiesStr);
         // 将逗号分隔的权限字符串转为集合
         Set<String> userAuthorities = parseToSet(authoritiesStr);
         
@@ -82,28 +83,32 @@ public class PermissionCheckAspect {
         // 获取方法签名
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
-        
+        log.info("Checking roles for method: {}.{}",
+                method.getDeclaringClass().getSimpleName(), method.getName());
         // 获取注解
         RequireRole annotation = method.getAnnotation(RequireRole.class);
         if (annotation == null) {
+            log.info("No @RequireRole annotation found, skipping role check for method: {}.{}",
+                    method.getDeclaringClass().getSimpleName(), method.getName());
             return;
         }
         
         // 获取当前用户的角色
         String rolesStr = UserInfoManager.getRoles();
+        log.info("User roles string: {}", UserInfoManager.getUserContext());
         if (rolesStr == null || rolesStr.isEmpty()) {
             log.warn("User has no roles, method: {}.{}", 
                     method.getDeclaringClass().getSimpleName(), method.getName());
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: No roles");
         }
-        
+
         // 将逗号分隔的角色字符串转为集合
         Set<String> userRoles = parseToSet(rolesStr);
-        
+        log.info("User roles: {}", userRoles);
         // 获取需要的角色
         String[] requiredRoles = annotation.value();
         RequireRole.Logical logical = annotation.logical();
-        
+
         // 校验角色
         boolean hasRole = checkPermissions(userRoles, requiredRoles, 
                 logical == RequireRole.Logical.AND ? RequirePermission.Logical.AND : RequirePermission.Logical.OR);
@@ -116,7 +121,7 @@ public class PermissionCheckAspect {
                     "Access denied: Insufficient roles");
         }
         
-        log.debug("Role check passed for method: {}.{}", 
+        log.info("Role check passed for method: {}.{}",
                 method.getDeclaringClass().getSimpleName(), method.getName());
     }
 
