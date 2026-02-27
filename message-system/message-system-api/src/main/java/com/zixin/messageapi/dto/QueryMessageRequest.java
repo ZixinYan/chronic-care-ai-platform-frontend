@@ -14,12 +14,7 @@ public class QueryMessageRequest implements Serializable {
      * 消息类型
      */
     private Integer messageType;
-    
-    /**
-     * 消息状态
-     */
-    private Integer status;
-    
+
     /**
      * 是否只查询未读消息
      */

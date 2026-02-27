@@ -1,5 +1,6 @@
 package com.zixin.messageapi.vo;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import lombok.Data;
@@ -8,7 +9,8 @@ import lombok.Data;
  * 消息详情VO
  */
 @Data
-public class MessageVO {
+public class MessageVO implements Serializable {
+    private static final long serialVersionUID = 1L;
     
     /**
      * 消息ID

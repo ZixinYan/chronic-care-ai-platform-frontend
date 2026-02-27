@@ -1,5 +1,9 @@
 package com.zixin.messageprovider.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zixin.accountapi.dto.GetUserInfoResponse;
 import com.zixin.messageapi.api.MessageAPI;
 import com.zixin.messageapi.dto.*;
@@ -11,6 +15,8 @@ import com.zixin.messageprovider.client.AccountClient;
 import com.zixin.messageprovider.mapper.MessageMapper;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
+import com.zixin.utils.utils.PageUtils;
+import jdk.jshell.Snippet;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
@@ -184,79 +190,148 @@ public class MessageServiceImpl implements MessageAPI {
         
         return response;
     }
-    
+
     @Override
     public QueryMessageResponse queryInbox(Long userId, QueryMessageRequest request) {
         QueryMessageResponse response = new QueryMessageResponse();
-        
+
         try {
             if (userId == null) {
+                log.error("Query inbox failed: userId is null");
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("用户ID不能为空");
                 return response;
             }
-            
-            // 统一查询所有消息（个人消息和群发消息）
-            List<Message> messages = messageMapper.selectInboxMessages(
-                    userId, 
-                    request.getMessageType(), 
-                    request.getUnreadOnly() != null && request.getUnreadOnly() ? 
-                            MessageStatus.UNREAD.getCode() : request.getStatus()
-            );
-            
+
+            log.info("Query inbox - userId: {}, pageNum: {}, pageSize: {}, messageType: {}, unreadOnly: {}",
+                    userId, request.getPageNum(), request.getPageSize(),
+                    request.getMessageType(), request.getUnreadOnly());
+
+            // 创建分页参数
+            Page<Message> page = new Page<>(request.getPageNum(), request.getPageSize());
+
+            // 构建查询条件
+            LambdaQueryWrapper<Message> wrapper = Wrappers.lambdaQuery();
+
+            // 收件人条件：个人消息 + 群发消息
+            wrapper.and(w -> w.eq(Message::getReceiverId, userId)
+                    .or()
+                    .isNull(Message::getReceiverId)
+                    .or()
+                    .eq(Message::getReceiverId, 0L));
+
+            // 消息类型条件（可选）
+            if (request.getMessageType() != null) {
+                wrapper.eq(Message::getMessageType, request.getMessageType());
+            }
+
+            // 状态条件处理
+            if (request.getUnreadOnly() != null && request.getUnreadOnly()) {
+                // 只查询未读消息
+                wrapper.eq(Message::getStatus, MessageStatus.UNREAD.getCode());
+            }
+            // 按时间倒序
+            wrapper.orderByDesc(Message::getCreateTime);
+
+            // 执行分页查询
+            IPage<Message> messagePage = messageMapper.selectPage(page, wrapper);
+
             // 转换为VO
-            List<MessageVO> result = messages.stream()
+            List<MessageVO> voList = messagePage.getRecords().stream()
                     .map(this::convertToVO)
+                    .filter(messageVO -> {
+                        // 过滤掉已撤回的消息
+                        return messageVO.getStatus() != MessageStatus.REVOKED.getCode();
+                    })
                     .collect(Collectors.toList());
-            
-            log.info("Query inbox success, userId: {}, count: {}", userId, result.size());
+
+            log.info("Query inbox success, userId: {}, total: {}, currentPage: {}",
+                    userId, messagePage.getTotal(), messagePage.getCurrent());
+
+            // 返回PageUtils格式
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("查询收件箱成功");
-            response.setMessages(result);
-            response.setTotal((long) result.size());
+            response.setMessageList(new PageUtils(
+                    voList,
+                    (int) messagePage.getTotal(),
+                    (int) messagePage.getSize(),
+                    (int) messagePage.getCurrent())
+            );
+            return response;
+
         } catch (Exception e) {
-            log.error("Query inbox error", e);
+            log.error("Query inbox error, userId: {}", userId, e);
             response.setCode(ToBCodeEnum.FAIL);
             response.setMessage("查询收件箱异常: " + e.getMessage());
+            return response;
         }
-        
-        return response;
     }
-    
+
     @Override
     public QueryMessageResponse querySentBox(Long userId, QueryMessageRequest request) {
         QueryMessageResponse response = new QueryMessageResponse();
-        
+
         try {
             if (userId == null) {
+                log.error("Query sent box failed: userId is null");
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("用户ID不能为空");
                 return response;
             }
-            
-            // 查询发送的消息
-            List<Message> messages = messageMapper.selectSentMessages(
-                    userId, 
-                    request.getMessageType(), 
-                    request.getStatus()
-            );
-            
-            List<MessageVO> result = messages.stream()
+
+            log.info("Query sent box - userId: {}, pageNum: {}, pageSize: {}, messageType: {}",
+                    userId, request.getPageNum(), request.getPageSize(),
+                    request.getMessageType());
+
+            // 创建分页参数
+            Page<Message> page = new Page<>(request.getPageNum(), request.getPageSize());
+
+            // 构建查询条件
+            LambdaQueryWrapper<Message> wrapper = Wrappers.lambdaQuery();
+
+            // 发件人条件
+            wrapper.eq(Message::getSenderId, userId);
+
+            // 消息类型条件（可选）
+            if (request.getMessageType() != null) {
+                wrapper.eq(Message::getMessageType, request.getMessageType());
+            }
+
+            // 按时间倒序
+            wrapper.orderByDesc(Message::getCreateTime);
+
+            // 执行分页查询
+            IPage<Message> messagePage = messageMapper.selectPage(page, wrapper);
+
+            // 转换为VO
+            List<MessageVO> voList = messagePage.getRecords().stream()
                     .map(this::convertToVO)
+                    .filter(messageVO -> {
+                        // 过滤掉已撤回的消息
+                        return messageVO.getStatus() != MessageStatus.REVOKED.getCode();
+                    })
                     .collect(Collectors.toList());
-            
-            log.info("Query sent box success, userId: {}, count: {}", userId, result.size());
+
+            log.info("Query sent box success, userId: {}, total: {}, currentPage: {}",
+                    userId, messagePage.getTotal(), messagePage.getCurrent());
+
+            // 返回PageUtils格式
             response.setCode(ToBCodeEnum.SUCCESS);
             response.setMessage("查询发件箱成功");
-            response.setMessages(result);
-            response.setTotal((long) result.size());
+            response.setMessageList(new PageUtils(
+                    voList,
+                    (int) messagePage.getTotal(),
+                    (int) messagePage.getSize(),
+                    (int) messagePage.getCurrent())
+            );
+            return response;
+
         } catch (Exception e) {
-            log.error("Query sent box error", e);
+            log.error("Query sent box error, userId: {}", userId, e);
             response.setCode(ToBCodeEnum.FAIL);
             response.setMessage("查询发件箱异常: " + e.getMessage());
+            return response;
         }
-        
-        return response;
     }
     
     @Override
@@ -283,7 +358,6 @@ public class MessageServiceImpl implements MessageAPI {
                 response.setMessage("无权限查看该消息");
                 return response;
             }
-            
             MessageVO vo = convertToVO(message);
             log.info("Get message detail success, messageId: {}, userId: {}", messageId, userId);
             response.setCode(ToBCodeEnum.SUCCESS);

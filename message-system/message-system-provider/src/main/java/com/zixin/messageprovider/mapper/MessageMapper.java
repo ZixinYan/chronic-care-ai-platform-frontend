@@ -1,7 +1,10 @@
 package com.zixin.messageprovider.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zixin.messageapi.po.Message;
+import com.zixin.messageapi.vo.MessageVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -16,27 +19,29 @@ public interface MessageMapper extends BaseMapper<Message> {
     /**
      * 查询用户收到的消息列表
      *
-     * @param receiverId 接收者ID
+     * @param userId 接收者ID
      * @param messageType 消息类型
      * @param status 消息状态
      * @return 消息列表
      */
-    List<Message> selectInboxMessages(@Param("receiverId") Long receiverId,
-                                       @Param("messageType") Integer messageType,
-                                       @Param("status") Integer status);
-    
+    @Deprecated
+    IPage<Message> selectInboxMessages(Page<?> page,
+                                         @Param("userId") Long userId,
+                                         @Param("messageType") Integer messageType,
+                                         @Param("status") Integer status);
     /**
      * 查询用户发送的消息列表
      *
-     * @param senderId 发送者ID
+     * @param userId 发送者ID
      * @param messageType 消息类型
      * @param status 消息状态
      * @return 消息列表
      */
-    List<Message> selectSentMessages(@Param("senderId") Long senderId,
+    @Deprecated
+    IPage<Message> selectSentMessages(Page<?> page,
+                                      @Param("userId") Long userId,
                                       @Param("messageType") Integer messageType,
                                       @Param("status") Integer status);
-    
     /**
      * 统计用户未读消息数量
      *

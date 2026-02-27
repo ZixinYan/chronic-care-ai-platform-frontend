@@ -2,6 +2,7 @@ package com.zixin.utils.MyBatis;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.zixin.utils.interceptor.SqlMonitorInterceptor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -28,7 +29,8 @@ public class CommonMybatisPlusConfig {
         paginationInterceptor.setOverflow(true);
         paginationInterceptor.setMaxLimit(500L);
         interceptor.addInnerInterceptor(paginationInterceptor);
-
+        // 乐观锁插件
+        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         return interceptor;
     }
 

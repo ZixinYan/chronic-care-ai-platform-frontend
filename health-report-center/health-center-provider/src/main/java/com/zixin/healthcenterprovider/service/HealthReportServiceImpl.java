@@ -28,6 +28,7 @@ import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StopWatch;
@@ -37,6 +38,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 健康报告服务实现
@@ -373,7 +375,64 @@ public class HealthReportServiceImpl implements HealthReportAPI {
         
         return response;
     }
-    
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ProcessReportResponse processReport(ProcessReportRequest request) {
+        ProcessReportResponse response = new ProcessReportResponse();
+        log.info("processReport - 处理报告请求, reportId: {}, result: {}, auditMark: {}",
+                request.getReportId(), request.getResult(), request.getComment());
+        // 1. 获取报告详情
+        HealthReport healthReport = healthReportMapper.selectById(request.getReportId());
+        if (healthReport == null) {
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("报告不存在");
+            return response;
+        }
+        int version = healthReport.getVersion();
+        if(!Objects.equals(healthReport.getStatus(), ReportStatus.PENDING.getCode())){
+            log.warn("processReport - 报告状态异常, reportId: {}, currentStatus: {}, expectedStatus: {}",
+                    request.getReportId(), healthReport.getStatus(), ReportStatus.PENDING.getCode());
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("报告已被处理");
+            return response;
+        }
+        // 2. 更新报告状态
+        int status = ReportStatus.fromCode(request.getResult()).getCode();
+        healthReport.setStatus(status);
+        healthReport.setAuditRemark(request.getComment());
+        // 3. 乐观锁更新
+        int rows = healthReportMapper.updateById(healthReport);
+        if (rows <= 0) {
+            log.warn("processReport - 更新失败, reportId: {}, version: {}", request.getReportId(), version);
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("处理失败");
+            return response;
+        }
+        response.setCode(ToBCodeEnum.SUCCESS);
+        response.setMessage("处理成功");
+        // 4. 处理完成后，发送消息通知患者
+        try {
+            messageClient.sendMessageAsync(
+                    UserInfoManager.getUserId(),
+                    SendMessageRequest.builder()
+                            .receiverId(healthReport.getPatientId())
+                            .messageType(MessageType.SYSTEM.getCode())
+                            .title("健康报告处理结果通知")
+                            .senderName(UserInfoManager.getUsername())
+                            .content("您的健康报告 '" + healthReport.getTitle() + "' 已经被处理，处理结果: "
+                                    + ReportStatus.fromCode(request.getResult()).getDescription()
+                                    + (request.getComment() != null ? "，备注: " + request.getComment() : ""))
+                            .build()
+            );
+            log.info("processReport - 消息发送成功, patientId: {}", healthReport.getPatientId());
+        } catch (Exception e) {
+            log.error("processReport - 消息发送失败, patientId: {}, error: {}",
+                    healthReport.getPatientId(), e.getMessage(), e);
+        }
+        return response;
+    }
+
     /**
      * 将实体转换为VO
      */
