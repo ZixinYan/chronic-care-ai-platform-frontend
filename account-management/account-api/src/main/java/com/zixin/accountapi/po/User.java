@@ -49,7 +49,7 @@ public class User {
     @TableField(typeHandler = SensitiveDataEncryptHandler.class)
     private String email;
     
-    private String avatarUrl;
+    private String avatar;
     
     private String address;
     

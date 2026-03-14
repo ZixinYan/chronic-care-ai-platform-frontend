@@ -1,4 +1,4 @@
-package com.zixin.utils.interceptor;
+package com.zixin.utils.MyBatis;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.executor.Executor;
@@ -73,7 +73,7 @@ public class SqlMonitorInterceptor implements Interceptor {
             logBuilder.append("\n执行耗时  ：").append(costTime).append(" ms");
 
             if (costTime > slowSqlThreshold) {
-                logBuilder.append(" ⚠️慢查询");
+                logBuilder.append(" 注意慢查询");
             }
 
             logBuilder.append("\n原始SQL   ：").append(sql);

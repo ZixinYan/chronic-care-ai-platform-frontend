@@ -1,13 +1,13 @@
-package com.zixin.doctorapi.dto;
+package com.zixin.aicapabilityapi.dto;
 
+import com.zixin.aicapabilityapi.vo.SuggestScheduleVO;
+import com.zixin.utils.utils.BaseResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.List;
 
-import com.zixin.doctorapi.vo.ScheduleVO;
-import com.zixin.utils.utils.BaseResponse;
 
 /**
  * AI生成日程建议响应
@@ -20,7 +20,7 @@ public class GenerateScheduleResponse extends BaseResponse implements Serializab
     /**
      * AI推荐的日程列表
      */
-    private List<ScheduleVO> recommendedSchedules;
+    private List<SuggestScheduleVO> recommendedSchedules;
     
     /**
      * AI推荐理由

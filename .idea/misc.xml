@@ -9,6 +9,9 @@
         <option value="$PROJECT_DIR$/blood-glucose-service/blood-glucose-api/pom.xml" />
         <option value="$PROJECT_DIR$/blood-glucose-service/blood-glucose-provider/pom.xml" />
         <option value="$PROJECT_DIR$/blood-glucose-service/blood-glucose-consumer/pom.xml" />
+        <option value="$PROJECT_DIR$/ai-capability-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ai-capability-service/ai-capability-api/pom.xml" />
+        <option value="$PROJECT_DIR$/ai-capability-service/ai-capability-provider/pom.xml" />
       </list>
     </option>
   </component>

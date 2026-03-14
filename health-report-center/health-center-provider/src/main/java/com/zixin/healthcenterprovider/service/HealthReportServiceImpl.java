@@ -109,13 +109,14 @@ public class HealthReportServiceImpl implements HealthReportAPI {
             log.info("uploadReport - 参数校验完成, patientId: {}, reportType: {}",
                     request.getPatientId(), reportType.getDescription());
 
-            // 2. 获取患者信息(包含主治医生ID)
+            // 2. 获取患者信息
             if (patient == null) {
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("患者信息查询失败");
                 return response;
             }
 
+            // TODO 采用AI判断
             final DoctorVO doctor = userIdentityClient.getDoctorInfo(patient.getAttendingDoctorId());
             if (doctor == null) {
                 response.setCode(ToBCodeEnum.FAIL);
@@ -135,7 +136,7 @@ public class HealthReportServiceImpl implements HealthReportAPI {
                 }
             }
 
-            // 5. 构建排班VO（提前构建）
+            // 5. 构建排班VO
             ScheduleVO scheduleVO = buildScheduleVO(
                     patient,
                     doctor,
@@ -180,7 +181,7 @@ public class HealthReportServiceImpl implements HealthReportAPI {
                             return false;
                         }
 
-                        // 6.3 同步添加排班
+                        // 6.3 调用AI能力判断同步添加排班
                         if (patient.getAttendingDoctorId() != null) {
                             boolean scheduleSuccess = doctorClient.addSchedule(
                                     doctor.getUserId(),

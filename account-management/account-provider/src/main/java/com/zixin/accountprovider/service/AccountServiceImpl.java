@@ -15,6 +15,7 @@ import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountprovider.config.RoleConfig;
 import com.zixin.accountprovider.mapper.*;
 import com.zixin.accountprovider.utils.AccountUtils;
+import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.BusinessException;
 import com.zixin.utils.exception.ToBCodeEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -256,20 +257,12 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
         UpdateUserInfoResponse response = new UpdateUserInfoResponse();
 
         try {
-            Map<String, Objects> updateData = request.getUpdateData();
-            if (updateData == null || !updateData.containsKey("account_id")) {
-                log.warn("Update failed - missing account_id");
-                response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("account_id is required");
-                return response;
-            }
-
-            // Safely get account_id
+            Map<String, Object> updateData = request.getUpdateData();
             Long userId;
             try {
-                userId = Long.valueOf(updateData.get("account_id").toString());
+                userId = UserInfoManager.getUserId();
             } catch (NumberFormatException e) {
-                log.warn("Update failed - invalid account_id format: {}", updateData.get("account_id"));
+                log.warn("Update failed - invalid userid,{}", UserInfoManager.getUserId());
                 response.setCode(ToBCodeEnum.FAIL);
                 response.setMessage("Invalid account_id format");
                 return response;
@@ -292,12 +285,22 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
                 return response;
             }
 
+            // check if update password
+            if(updateData.containsKey("password")){
+                if(!user.getPhone().equals(updateData.get("phone"))){
+                    log.error("Attempt to update password without same phone number: {}", userId);
+                    response.setCode(ToBCodeEnum.FAIL);
+                    response.setMessage("Please user same phone number to update password");
+                    return response;
+                }
+            }
+
             // Build update condition
             UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
             updateWrapper.eq("user_id", userId);
 
             updateData.forEach((key, value) -> {
-                if (value != null && !"account_id".equals(key)) {
+                if (value != null && !"user_id".equals(key)) {
                     updateWrapper.set(key, value);
 
                     // Handle special fields
@@ -561,7 +564,7 @@ public class AccountServiceImpl extends ServiceImpl<UserMapper, User> implements
                 user.getNickname(),
                 user.getEmail(),
                 user.getGender(),
-                user.getAvatarUrl(),
+                user.getAvatar(),
                 user.getAddress(),
                 user.getBirthday(),
                 user.getIdCard(),

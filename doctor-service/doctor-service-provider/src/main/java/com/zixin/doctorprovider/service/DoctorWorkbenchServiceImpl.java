@@ -25,7 +25,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -58,56 +57,6 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
     public DoctorWorkbenchServiceImpl(DoctorScheduleMapper scheduleMapper, DoctorClient doctorClient) {
         this.scheduleMapper = scheduleMapper;
         this.doctorClient = doctorClient;
-    }
-
-
-    @Override
-    public GenerateScheduleResponse generateScheduleSuggestion(GenerateScheduleRequest request) {
-        GenerateScheduleResponse response = new GenerateScheduleResponse();
-
-        try {
-            // 验证医生存在
-            DoctorVO doctorVO = doctorClient.getDoctorInfo(GetDoctorInfoRequest.builder()
-                    .userId(request.getDoctorId())
-                    .build());
-            if (doctorVO == null) {
-                log.error("Doctor not found for userId: {}", request.getDoctorId());
-                response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("医生不存在");
-                return response;
-            }
-            
-            // 生成智能日程推荐
-            List<DoctorSchedule> recommendations = generateSchedules(request);
-            if (recommendations == null || recommendations.isEmpty()) {
-                log.warn("No schedule recommendations generated for userId: {}", request.getDoctorId());
-                response.setCode(ToBCodeEnum.FAIL);
-                response.setMessage("未生成日程推荐");
-                return response;
-            }
-            
-            // 批量插入日程
-            scheduleMapper.batchInsert(recommendations);
-            
-            // 转换为VO并返回
-            List<ScheduleVO> scheduleVOS = recommendations.stream()
-                    .map(this::convertToVO)
-                    .collect(Collectors.toList());
-            
-            response.setCode(ToBCodeEnum.SUCCESS);
-            response.setMessage("AI日程推荐生成成功");
-            response.setRecommendedSchedules(scheduleVOS);
-            response.setRecommendation("基于您的历史数据和当前工作安排，AI为您生成了 " + scheduleVOS.size() + " 条日程建议");
-            
-            log.info("Generate schedule suggestion success, userId: {}, date: {}",
-                    request.getDoctorId(), request.getScheduleDay());
-        } catch (Exception e) {
-            log.error("Generate schedule suggestion error", e);
-            response.setCode(ToBCodeEnum.FAIL);
-            response.setMessage("生成日程推荐失败: " + e.getMessage());
-        }
-        
-        return response;
     }
 
     @Override
@@ -598,30 +547,6 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
         }
 
         return vo;
-    }
-    
-    /**
-     * 生成智能日程推荐
-     * 
-     * 当前实现：返回空列表（待接入AI服务）
-     * 后续接入AI服务后，将根据以下信息生成日程：
-     * - 医生的历史日程数据
-     * - 患者的预约信息
-     * - 科室的工作安排
-     * - 医生的专业领域和擅长方向
-     */
-    private List<DoctorSchedule> generateSchedules(GenerateScheduleRequest request) {
-        // TODO: 接入AI服务生成智能日程推荐
-        // 1. 查询医生的历史日程数据
-        // 2. 查询患者的预约信息
-        // 3. 调用AI服务生成日程推荐
-        // 4. 返回生成的日程列表
-        
-        log.info("Generate schedules for userId: {}, scheduleDay: {}", 
-                request.getDoctorId(), request.getScheduleDay());
-        
-        // 当前返回空列表，待AI服务接入后实现
-        return new ArrayList<>();
     }
 
     /**

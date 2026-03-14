@@ -230,6 +230,12 @@ public class MessageServiceImpl implements MessageAPI {
                 // 只查询未读消息
                 wrapper.eq(Message::getStatus, MessageStatus.UNREAD.getCode());
             }
+
+            // 按照发送人分类
+            if (request.getUserId() != null){
+                wrapper.eq(Message::getSenderId, request.getUserId());
+            }
+
             // 按时间倒序
             wrapper.orderByDesc(Message::getCreateTime);
 
@@ -295,6 +301,11 @@ public class MessageServiceImpl implements MessageAPI {
             // 消息类型条件（可选）
             if (request.getMessageType() != null) {
                 wrapper.eq(Message::getMessageType, request.getMessageType());
+            }
+
+            // 按照发送人分类
+            if (request.getUserId() != null){
+                wrapper.eq(Message::getReceiverId, request.getUserId());
             }
 
             // 按时间倒序
