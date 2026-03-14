@@ -25,6 +25,7 @@
         <module name="health-center-provider" />
         <module name="ai-capability-provider" />
         <module name="health-center-consumer" />
+        <module name="ai-capability-consumer" />
         <module name="blood-glucose-consumer" />
         <module name="doctor-service-consumer" />
         <module name="gateway" />
@@ -36,6 +37,7 @@
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="ai-capability-api" options="" />
+      <module name="ai-capability-consumer" options="" />
       <module name="ai-capability-service" options="" />
       <module name="blood-glucose-api" options="" />
       <module name="blood-glucose-consumer" options="" />

@@ -9,7 +9,5 @@ spring:
 
 ai:
   schedule:
-    skill:
-      base-path: classpath:skills/
-      enable-cache: true
-      reload-interval: 300000
+    skills:
+      directory: classpath:skills

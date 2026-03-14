@@ -12,6 +12,7 @@
         <option value="$PROJECT_DIR$/ai-capability-service/pom.xml" />
         <option value="$PROJECT_DIR$/ai-capability-service/ai-capability-api/pom.xml" />
         <option value="$PROJECT_DIR$/ai-capability-service/ai-capability-provider/pom.xml" />
+        <option value="$PROJECT_DIR$/ai-capability-service/ai-capability-consumer/pom.xml" />
       </list>
     </option>
   </component>

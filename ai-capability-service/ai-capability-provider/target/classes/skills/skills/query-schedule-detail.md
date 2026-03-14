@@ -1,47 +1,27 @@
-# query-schedule-detail
+---
+name: query-schedule-detail
+description: 查询指定医生在某天的详细排班信息，包括具体时间段、日程状态等。当需要了解某医生的具体时间安排、选择合适的预约时间段时使用。
+tools:
+  - queryDoctorScheduleDetailForDay
+---
 
-## Skill Definition
+# 查询详细排班信息
 
-```json
-{
-  "name": "query-schedule-detail",
-  "description": "查询指定医生在某天的详细排班信息，包括具体时间段、日程状态等。用于在获取医生概览后，进一步了解某医生的具体时间安排，以便选择合适的预约时间段。",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "doctorId": {
-        "type": "integer",
-        "description": "医生ID（账户ID），从 query-doctor-availability 的返回结果中获取"
-      },
-      "scheduleDay": {
-        "type": "string",
-        "description": "预约日期，格式为 YYYY-MM-DD",
-        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-      }
-    },
-    "required": ["doctorId", "scheduleDay"]
-  },
-  "tools": [
-    {
-      "name": "queryDoctorScheduleDetailForDay",
-      "description": "查询指定医生在某天的详细排班信息"
-    }
-  ]
-}
-```
+## 指令
 
-## 触发条件
+当需要获取医生详细时间段时，请执行以下操作：
 
-- 已通过 `query-doctor-availability` 获取医生概览
-- 需要了解某医生的具体时间段安排
-- 需要选择合适的预约时间段
-- 需要确认时间段的可用状态
+1. **确定目标医生**：从 `query-doctor-availability` 的返回结果中选择候选医生，获取 `doctorId`。
+2. **调用工具**：使用 `queryDoctorScheduleDetailForDay` 工具获取该医生的详细排班。
+3. **分析时间段**：关注以下字段：
+   - `status`：日程状态，优先选择 `PENDING` 状态
+   - `startTime` / `endTime`：时间段，避免冲突
+   - `scheduleCategory`：日程类别
+4. **选择合适时段**：优先选择 PENDING 状态的时间段，上午时段优先。
 
 ## 工具调用
 
 ### queryDoctorScheduleDetailForDay
-
-**描述**：查询指定医生在某天的详细排班信息
 
 **参数**：
 
@@ -57,57 +37,15 @@
   {
     "id": 10001,
     "doctorName": "张医生",
-    "patientName": null,
     "schedule": "上午门诊",
     "scheduleCategory": "OUTPATIENT",
-    "scheduleCategoryName": "门诊",
     "scheduleDay": "2024-01-15",
-    "priority": 1,
-    "priorityDesc": "高优先级",
     "status": "PENDING",
-    "statusDesc": "待处理",
-    "result": null,
-    "link": null,
     "startTime": "09:00",
     "endTime": "10:00"
-  },
-  {
-    "id": 10002,
-    "doctorName": "张医生",
-    "patientName": null,
-    "schedule": "下午门诊",
-    "scheduleCategory": "OUTPATIENT",
-    "scheduleCategoryName": "门诊",
-    "scheduleDay": "2024-01-15",
-    "priority": 2,
-    "priorityDesc": "中优先级",
-    "status": "IN_PROGRESS",
-    "statusDesc": "进行中",
-    "result": null,
-    "link": null,
-    "startTime": "14:00",
-    "endTime": "15:00"
   }
 ]
 ```
-
-## 返回字段说明
-
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| id | long | 日程记录ID |
-| doctorName | string | 医生姓名 |
-| patientName | string | 患者姓名（可能为空） |
-| schedule | string | 日程描述 |
-| scheduleCategory | string | 日程类别代码 |
-| scheduleCategoryName | string | 日程类别名称 |
-| scheduleDay | string | 日程日期 |
-| priority | integer | 优先级（1-高，2-中，3-低） |
-| priorityDesc | string | 优先级描述 |
-| status | string | 状态代码 |
-| statusDesc | string | 状态描述 |
-| startTime | string | 开始时间 |
-| endTime | string | 结束时间 |
 
 ## 日程状态说明
 
