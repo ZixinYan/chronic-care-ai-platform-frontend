@@ -7,15 +7,20 @@ import com.zixin.accountapi.dto.GetDoctorInfoRequest;
 import com.zixin.accountapi.dto.GetPatientInfoRequest;
 import com.zixin.accountapi.vo.DoctorVO;
 import com.zixin.accountapi.vo.PatientVO;
+import com.zixin.aicapabilityapi.dto.GenerateMedicalRecordRequest;
+import com.zixin.aicapabilityapi.vo.MedicalRecordVO;
 import com.zixin.doctorapi.api.DoctorWorkbenchAPI;
 import com.zixin.doctorapi.dto.*;
 import com.zixin.doctorapi.enums.ScheduleCategory;
 import com.zixin.doctorapi.enums.SchedulePriority;
 import com.zixin.doctorapi.enums.ScheduleStatus;
 import com.zixin.doctorapi.po.DoctorSchedule;
+import com.zixin.doctorapi.po.MedicalRecord;
 import com.zixin.doctorapi.vo.ScheduleVO;
+import com.zixin.doctorprovider.client.AiClient;
 import com.zixin.doctorprovider.client.DoctorClient;
 import com.zixin.doctorprovider.mapper.DoctorScheduleMapper;
+import com.zixin.doctorprovider.mapper.MedicalRecordMapper;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
 import com.zixin.utils.utils.PageUtils;
@@ -52,11 +57,18 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
     private final DoctorScheduleMapper scheduleMapper;
+    private final MedicalRecordMapper medicalRecordMapper;
     private final DoctorClient doctorClient;
+    private final AiClient aiClient;
 
-    public DoctorWorkbenchServiceImpl(DoctorScheduleMapper scheduleMapper, DoctorClient doctorClient) {
+    public DoctorWorkbenchServiceImpl(DoctorScheduleMapper scheduleMapper,
+                                       MedicalRecordMapper medicalRecordMapper,
+                                       DoctorClient doctorClient,
+                                       AiClient aiClient) {
         this.scheduleMapper = scheduleMapper;
+        this.medicalRecordMapper = medicalRecordMapper;
         this.doctorClient = doctorClient;
+        this.aiClient = aiClient;
     }
 
     @Override
@@ -230,12 +242,15 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
             if (rows > 0) {
                 // 查询更新后的日程
                 DoctorSchedule updated = scheduleMapper.selectById(request.getScheduleId());
-                
+
+                // 异步生成电子病历
+                generateMedicalRecordAsync(schedule, request);
+
                 response.setCode(ToBCodeEnum.SUCCESS);
                 response.setMessage("完成日程成功");
                 response.setSchedule(convertToVO(updated));
-                
-                log.info("Complete schedule success, scheduleId: {}, doctorId: {}", 
+
+                log.info("Complete schedule success, scheduleId: {}, doctorId: {}",
                         request.getScheduleId(), request.getDoctorId());
             } else {
                 log.warn("Complete schedule failed due to version conflict, scheduleId: {}", request.getScheduleId());
@@ -561,15 +576,82 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
     private String buildResult(CompleteScheduleRequest request) {
         StringBuilder result = new StringBuilder();
         result.append("诊断报告: ").append(request.getDiagnosisReport());
-        
+
         if (request.getPrescription() != null && !request.getPrescription().isEmpty()) {
             result.append("\n处方信息: ").append(request.getPrescription());
         }
-        
+
         if (request.getNotes() != null && !request.getNotes().isEmpty()) {
             result.append("\n备注: ").append(request.getNotes());
         }
-        
+
         return result.toString();
+    }
+
+    /**
+     * 异步生成电子病历
+     *
+     * 日程完成后，调用 AI 服务生成电子病历并保存到数据库
+     */
+    private void generateMedicalRecordAsync(DoctorSchedule schedule, CompleteScheduleRequest request) {
+        try {
+            // 构建请求
+            GenerateMedicalRecordRequest recordRequest = new GenerateMedicalRecordRequest();
+            recordRequest.setScheduleId(schedule.getId());
+            recordRequest.setDoctorId(schedule.getDoctorId());
+            recordRequest.setDoctorName(schedule.getDoctorName());
+            recordRequest.setPatientId(schedule.getPatientId());
+            recordRequest.setPatientName(schedule.getPatientName());
+            recordRequest.setScheduleDay(schedule.getScheduleDay());
+            recordRequest.setScheduleContent(schedule.getSchedule());
+
+            // 设置日程类别
+            ScheduleCategory category = ScheduleCategory.getByName(schedule.getScheduleCategory());
+            if (category != null) {
+                recordRequest.setScheduleCategory(category.getCode());
+                recordRequest.setScheduleCategoryName(category.getDescription());
+            }
+
+            // 设置诊断报告
+            recordRequest.setDiagnosisReport(request.getDiagnosisReport());
+            recordRequest.setPrescription(request.getPrescription());
+            recordRequest.setNotes(request.getNotes());
+            recordRequest.setHealthReportLink(schedule.getLink());
+
+            // 调用 AI 生成电子病历
+            MedicalRecordVO recordVO = aiClient.generateMedicalRecord(recordRequest);
+
+            if (recordVO != null) {
+                // 保存电子病历到数据库
+                MedicalRecord record = new MedicalRecord();
+                record.setScheduleId(schedule.getId());
+                record.setDoctorId(schedule.getDoctorId());
+                record.setDoctorName(schedule.getDoctorName());
+                record.setPatientId(schedule.getPatientId());
+                record.setPatientName(schedule.getPatientName());
+                record.setVisitDate(schedule.getScheduleDay());
+                record.setVisitType(recordVO.getVisitType());
+                record.setChiefComplaint(recordVO.getChiefComplaint());
+                record.setPresentIllness(recordVO.getPresentIllness());
+                record.setPastHistory(recordVO.getPastHistory());
+                record.setDiagnosis(recordVO.getDiagnosis());
+                record.setTreatmentPlan(recordVO.getTreatmentPlan());
+                record.setPrescription(recordVO.getPrescription());
+                record.setPrecautions(recordVO.getPrecautions());
+                record.setFollowUpAdvice(recordVO.getFollowUpAdvice());
+                record.setFullContent(recordVO.getFullContent());
+                record.setCreateTime(System.currentTimeMillis());
+                record.setUpdateTime(System.currentTimeMillis());
+
+                medicalRecordMapper.insert(record);
+                log.info("Medical record generated and saved, scheduleId: {}, recordId: {}",
+                        schedule.getId(), record.getId());
+            } else {
+                log.warn("AI failed to generate medical record, scheduleId: {}", schedule.getId());
+            }
+        } catch (Exception e) {
+            // 电子病历生成失败不影响主流程
+            log.error("Failed to generate medical record for schedule: {}", schedule.getId(), e);
+        }
     }
 }

@@ -3,11 +3,16 @@ package com.zixin.aicapabilityprovider.tool;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.zixin.accountapi.api.UserIdentityAPI;
+import com.zixin.accountapi.dto.GetAllDoctorsResponse;
 import com.zixin.accountapi.dto.GetDoctorInfoResponse;
 import com.zixin.accountapi.vo.DoctorVO;
+import com.zixin.doctorapi.api.DoctorLeaveAPI;
 import com.zixin.doctorapi.api.DoctorWorkbenchAPI;
+import com.zixin.doctorapi.dto.QueryLeaveRequest;
+import com.zixin.doctorapi.dto.QueryLeaveResponse;
 import com.zixin.doctorapi.dto.QueryScheduleRequest;
 import com.zixin.doctorapi.dto.QueryScheduleResponse;
+import com.zixin.doctorapi.vo.DoctorLeaveVO;
 import com.zixin.doctorapi.vo.ScheduleVO;
 import com.zixin.utils.utils.PageUtils;
 import lombok.Data;
@@ -32,6 +37,9 @@ public class DoctorScheduleTools {
 
     @DubboReference(timeout = 50000)
     private DoctorWorkbenchAPI doctorWorkbenchAPI;
+
+    @DubboReference(timeout = 50000)
+    private DoctorLeaveAPI doctorLeaveAPI;
 
     public DoctorScheduleTools() {
     }
@@ -83,6 +91,156 @@ public class DoctorScheduleTools {
             log.error("Failed to query doctor schedule detail", e);
             return gson.toJson(new ArrayList<>());
         }
+    }
+
+    /**
+     * 查询所有医生信息，用于 AI 智能排班。
+     */
+    @Tool(name = "queryAllDoctors", description = "查询系统中所有医生的信息（包括科室、职称、经验等），返回 JSON 列表，用于智能排班匹配")
+    public String queryAllDoctors() {
+        log.info("[Tool] queryAllDoctors");
+
+        try {
+            GetAllDoctorsResponse response = userIdentityAPI.getAllDoctors();
+            if (response == null || response.getDoctors() == null) {
+                return gson.toJson(new AllDoctorsResult(new ArrayList<>()));
+            }
+
+            List<DoctorSummary> summaries = response.getDoctors().stream()
+                    .map(this::convertToDoctorSummary)
+                    .collect(Collectors.toList());
+
+            return gson.toJson(new AllDoctorsResult(summaries));
+        } catch (Exception e) {
+            log.error("Failed to query all doctors", e);
+            return gson.toJson(new AllDoctorsResult(new ArrayList<>()));
+        }
+    }
+
+    /**
+     * 查询指定日期范围内的医生请假情况，用于 AI 智能排班。
+     */
+    @Tool(name = "queryDoctorLeaves", description = "查询指定日期范围内的医生请假情况（已批准的请假），返回 JSON 列表，用于智能排班时排除请假医生")
+    public String queryDoctorLeaves(String startDay, String endDay) {
+        log.info("[Tool] queryDoctorLeaves, startDay={}, endDay={}", startDay, endDay);
+
+        String normalizedStartDay = normalizeScheduleDay(startDay);
+        String normalizedEndDay = normalizeScheduleDay(endDay);
+
+        if (normalizedStartDay == null || normalizedEndDay == null) {
+            return "{\"error\":\"startDay and endDay are required\"}";
+        }
+
+        try {
+            QueryLeaveRequest request = new QueryLeaveRequest();
+            request.setStartDay(normalizedStartDay);
+            request.setEndDay(normalizedEndDay);
+            request.setStatus("APPROVED"); // 只查询已批准的请假
+            request.setPageSize(1000);
+
+            QueryLeaveResponse response = doctorLeaveAPI.queryLeaves(request);
+            if (response == null || response.getLeaves() == null) {
+                return gson.toJson(new DoctorLeaveResult(new ArrayList<>()));
+            }
+
+            PageUtils pageUtils = response.getLeaves();
+            if (pageUtils.getList() == null) {
+                return gson.toJson(new DoctorLeaveResult(new ArrayList<>()));
+            }
+
+            List<DoctorLeaveSummary> summaries = pageUtils.getList().stream()
+                    .filter(item -> item instanceof DoctorLeaveVO)
+                    .map(item -> (DoctorLeaveVO) item)
+                    .map(this::convertToLeaveSummary)
+                    .collect(Collectors.toList());
+
+            return gson.toJson(new DoctorLeaveResult(summaries));
+        } catch (Exception e) {
+            log.error("Failed to query doctor leaves", e);
+            return gson.toJson(new DoctorLeaveResult(new ArrayList<>()));
+        }
+    }
+
+    /**
+     * 将 DoctorVO 转换为摘要信息
+     */
+    private DoctorSummary convertToDoctorSummary(DoctorVO doctor) {
+        DoctorSummary summary = new DoctorSummary();
+        summary.setDoctorId(doctor.getUserId());
+        summary.setDoctorName(doctor.getUsername());
+        summary.setDepartment(doctor.getDepartment());
+        summary.setTitle(doctor.getTitle());
+        summary.setExperience(doctor.getExperience());
+        summary.setEducation(doctor.getEducation());
+        summary.setBio(doctor.getBio());
+        return summary;
+    }
+
+    /**
+     * 将 DoctorLeaveVO 转换为摘要信息
+     */
+    private DoctorLeaveSummary convertToLeaveSummary(DoctorLeaveVO leave) {
+        DoctorLeaveSummary summary = new DoctorLeaveSummary();
+        summary.setDoctorId(leave.getDoctorId());
+        summary.setDoctorName(leave.getDoctorName());
+        summary.setLeaveType(leave.getLeaveType());
+        summary.setLeaveTypeDesc(leave.getLeaveTypeDesc());
+        summary.setStartDay(leave.getStartDay());
+        summary.setEndDay(leave.getEndDay());
+        summary.setReason(leave.getReason());
+        return summary;
+    }
+
+    /**
+     * 所有医生信息结果封装
+     */
+    @Data
+    public static class AllDoctorsResult {
+        private List<DoctorSummary> doctors;
+
+        public AllDoctorsResult(List<DoctorSummary> doctors) {
+            this.doctors = doctors;
+        }
+    }
+
+    /**
+     * 医生摘要信息
+     */
+    @Data
+    public static class DoctorSummary {
+        private Long doctorId;
+        private String doctorName;
+        private String department;
+        private String title;
+        private Integer experience;
+        private String education;
+        private String bio;
+    }
+
+    /**
+     * 医生请假结果封装
+     */
+    @Data
+    public static class DoctorLeaveResult {
+        private List<DoctorLeaveSummary> leaves;
+
+        public DoctorLeaveResult(List<DoctorLeaveSummary> leaves) {
+            this.leaves = leaves;
+        }
+    }
+
+    /**
+     * 医生请假摘要信息
+     */
+    @Data
+    public static class DoctorLeaveSummary {
+        private Long doctorId;
+        private String doctorName;
+        private String leaveType;
+        private String leaveTypeDesc;
+        private String startDay;
+        private String endDay;
+        private String reason;
     }
 
     /**

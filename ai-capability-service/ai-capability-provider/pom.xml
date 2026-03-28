@@ -157,6 +157,13 @@
             <artifactId>account-api</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
+
+        <!-- health-center-api：查询患者健康报告 -->
+        <dependency>
+            <groupId>com.zixin</groupId>
+            <artifactId>health-center-api</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
     <build>

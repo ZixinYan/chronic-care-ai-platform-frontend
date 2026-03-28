@@ -60,6 +60,19 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
 
         String toolScheduleDay = normalizeScheduleDayForDoctorDb(request.getScheduleDay());
 
+        // Step 1: 查询所有医生信息
+        String allDoctorsObservation = doctorScheduleTools.queryAllDoctors();
+        log.debug("ReAct observation allDoctors (truncated): {}",
+                allDoctorsObservation.length() > 500 ? allDoctorsObservation.substring(0, 500) + "…" : allDoctorsObservation);
+
+        // Step 2: 查询医生请假情况（查询目标日期前后7天的请假记录）
+        String leaveStartDay = calculateLeaveStartDay(toolScheduleDay, -7);
+        String leaveEndDay = calculateLeaveStartDay(toolScheduleDay, 7);
+        String leavesObservation = doctorScheduleTools.queryDoctorLeaves(leaveStartDay, leaveEndDay);
+        log.debug("ReAct observation leaves (truncated): {}",
+                leavesObservation.length() > 500 ? leavesObservation.substring(0, 500) + "…" : leavesObservation);
+
+        // Step 3: 查询医生排班情况
         String availabilityObservation = doctorScheduleTools.queryDoctorAvailabilityForDay(
                 toolScheduleDay,
                 request.getBusinessRequirement() != null ? request.getBusinessRequirement() : ""
@@ -67,6 +80,7 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
         log.debug("ReAct observation availability (truncated): {}",
                 availabilityObservation.length() > 500 ? availabilityObservation.substring(0, 500) + "…" : availabilityObservation);
 
+        // Step 4: 查询候选医生的详细排班信息
         List<String> detailObservations = new ArrayList<>();
         for (Long doctorId : extractTopDoctorIds(availabilityObservation, MAX_DETAIL_LOOKUPS)) {
             String detailJson = doctorScheduleTools.queryDoctorScheduleDetailForDay(doctorId, toolScheduleDay);
@@ -76,7 +90,10 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
                     detailJson.length() > 400 ? detailJson.substring(0, 400) + "…" : detailJson);
         }
 
-        String userPrompt = buildUserPromptWithObservations(request, toolScheduleDay, availabilityObservation, detailObservations);
+        String userPrompt = buildUserPromptWithObservations(
+                request, toolScheduleDay,
+                allDoctorsObservation, leavesObservation, availabilityObservation, detailObservations
+        );
 
         String modelResponse;
         try {
@@ -139,6 +156,22 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
     }
 
     /**
+     * 计算请假查询的起始/结束日期
+     */
+    private String calculateLeaveStartDay(String scheduleDay, int offsetDays) {
+        if (scheduleDay == null || scheduleDay.length() != 10) {
+            return scheduleDay;
+        }
+        try {
+            java.time.LocalDate date = java.time.LocalDate.parse(scheduleDay);
+            java.time.LocalDate resultDate = date.plusDays(offsetDays);
+            return resultDate.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (Exception e) {
+            return scheduleDay;
+        }
+    }
+
+    /**
      * 从 availability JSON 中取出前 {@code limit} 个 {@code doctorId}，用于可选的明细查询。
      */
     private static List<Long> extractTopDoctorIds(String availabilityJson, int limit) {
@@ -176,6 +209,8 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
     private String buildUserPromptWithObservations(
             GenerateScheduleRequest request,
             String toolScheduleDay,
+            String allDoctorsObservation,
+            String leavesObservation,
             String availabilityObservation,
             List<String> detailObservations) {
 
@@ -196,9 +231,22 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
             sb.append("**是否指定医生**: 否\n");
         }
 
+        // Observation 1: 所有医生信息
+        sb.append("\n## Observation · queryAllDoctors\n\n");
+        sb.append("以下是系统中所有医生的基本信息，包括科室、职称、工作经验等，用于根据专业匹配度推荐：\n");
+        sb.append(allDoctorsObservation).append("\n");
+
+        // Observation 2: 医生请假情况
+        sb.append("\n## Observation · queryDoctorLeaves\n\n");
+        sb.append("以下是目标日期附近的已批准请假记录，排班时需排除这些医生的空闲时段：\n");
+        sb.append(leavesObservation).append("\n");
+
+        // Observation 3: 医生排班情况
         sb.append("\n## Observation · queryDoctorAvailabilityForDay\n\n");
+        sb.append("以下是目标日期各医生的排班情况，包含已有日程数量和状态：\n");
         sb.append(availabilityObservation).append("\n");
 
+        // Observation 4: 候选医生详细排班
         int idx = 1;
         for (String detail : detailObservations) {
             sb.append("\n## Observation · queryDoctorScheduleDetailForDay (候选 ").append(idx++).append(")\n\n");
@@ -206,7 +254,11 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
         }
 
         sb.append("\n---\n");
-        sb.append("请根据以上 Observation **直接输出**最终纯 JSON（`schedules` + `recommendation`），不要描述调用工具，不要使用 Markdown 代码块。\n");
+        sb.append("请根据以上 Observation 进行智能排班推荐：\n");
+        sb.append("1. 优先根据业务需求匹配医生专业（科室、职称、经验）\n");
+        sb.append("2. 排除请假期间的医生（检查 leaves 列表中是否有 doctorId 对应且日期重叠）\n");
+        sb.append("3. 考虑医生当天的已有日程数量，优先推荐空闲医生\n");
+        sb.append("4. **直接输出**最终纯 JSON（`schedules` + `recommendation`），不要描述调用工具，不要使用 Markdown 代码块。\n");
         return sb.toString();
     }
 

@@ -510,7 +510,9 @@ public class HealthReportServiceImpl implements HealthReportAPI {
 
         // 基础信息
         scheduleVO.setSchedule("查看患者 " + patient.getUsername() + " 的诊断报告");
+        scheduleVO.setDoctorId(doctor.getUserId());
         scheduleVO.setDoctorName(doctor.getUsername());
+        scheduleVO.setPatientId(patient.getUserId());
         scheduleVO.setPatientName(patient.getUsername());
 
         // 状态设置

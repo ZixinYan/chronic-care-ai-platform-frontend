@@ -8,5 +8,5 @@ import java.util.List;
 
 public interface AIScheduleAPI {
     // AI生成医生日程建议
-    public GenerateScheduleResponse SmartScheduleGenerate(GenerateScheduleRequest request);
+    GenerateScheduleResponse SmartScheduleGenerate(GenerateScheduleRequest request);
 }

@@ -83,4 +83,9 @@ public class ScheduleVO implements Serializable {
      * 结束时间
      */
     private Long endTime;
+
+    /**
+     * 患者ID
+     */
+    private Long patientId;
 }
