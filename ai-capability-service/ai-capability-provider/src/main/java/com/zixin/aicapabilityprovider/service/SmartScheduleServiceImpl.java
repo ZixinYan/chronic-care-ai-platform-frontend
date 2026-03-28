@@ -5,26 +5,45 @@ import com.zixin.aicapabilityapi.dto.AiScheduleResult;
 import com.zixin.aicapabilityapi.dto.GenerateScheduleRequest;
 import com.zixin.aicapabilityapi.dto.GenerateScheduleResponse;
 import com.zixin.aicapabilityapi.vo.SuggestScheduleVO;
+import com.zixin.aicapabilityprovider.tool.DoctorScheduleTools;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.zixin.utils.exception.ToBCodeEnum;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * 智能排班：采用 <b>Code-first ReAct</b>——在 Java 中顺序执行工具（Act）并将结果作为 Observation 注入用户消息，
+ * 再调用无工具的 {@link ChatClient} 完成推理与 JSON 输出（Reason），避免模型伪造工具调用。
+ */
+@Slf4j
 @Service
 @DubboService
 public class SmartScheduleServiceImpl implements AIScheduleAPI {
 
+    private static final int MAX_DETAIL_LOOKUPS = 2;
+
     private final ChatClient chatClient;
+    private final DoctorScheduleTools doctorScheduleTools;
     private final Gson gson = new GsonBuilder().create();
 
-    public SmartScheduleServiceImpl(ChatClient chatClient) {
+    public SmartScheduleServiceImpl(
+            @Qualifier("scheduleChatClient") ChatClient chatClient,
+            DoctorScheduleTools doctorScheduleTools) {
         this.chatClient = chatClient;
+        this.doctorScheduleTools = doctorScheduleTools;
     }
 
     @Override
@@ -39,7 +58,25 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
             return response;
         }
 
-        String userPrompt = buildUserPrompt(request);
+        String toolScheduleDay = normalizeScheduleDayForDoctorDb(request.getScheduleDay());
+
+        String availabilityObservation = doctorScheduleTools.queryDoctorAvailabilityForDay(
+                toolScheduleDay,
+                request.getBusinessRequirement() != null ? request.getBusinessRequirement() : ""
+        );
+        log.debug("ReAct observation availability (truncated): {}",
+                availabilityObservation.length() > 500 ? availabilityObservation.substring(0, 500) + "…" : availabilityObservation);
+
+        List<String> detailObservations = new ArrayList<>();
+        for (Long doctorId : extractTopDoctorIds(availabilityObservation, MAX_DETAIL_LOOKUPS)) {
+            String detailJson = doctorScheduleTools.queryDoctorScheduleDetailForDay(doctorId, toolScheduleDay);
+            detailObservations.add(detailJson);
+            log.debug("ReAct observation detail doctorId={} (truncated): {}",
+                    doctorId,
+                    detailJson.length() > 400 ? detailJson.substring(0, 400) + "…" : detailJson);
+        }
+
+        String userPrompt = buildUserPromptWithObservations(request, toolScheduleDay, availabilityObservation, detailObservations);
 
         String modelResponse;
         try {
@@ -47,6 +84,7 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
                     .user(userPrompt)
                     .call()
                     .content();
+            log.info("modelResponse={}", modelResponse);
         } catch (Exception e) {
             response.setCode(ToBCodeEnum.FAIL);
             response.setMessage("调用 AI 智能排班失败: " + e.getMessage());
@@ -55,20 +93,38 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
             return response;
         }
 
+        String jsonPayload = trimJsonFence(modelResponse);
+        log.info("ReAct model response: {}", jsonPayload);
         List<SuggestScheduleVO> schedules = Collections.emptyList();
         String recommendation = null;
         try {
-            AiScheduleResult result = gson.fromJson(modelResponse, AiScheduleResult.class);
+            AiScheduleResult result = gson.fromJson(jsonPayload, AiScheduleResult.class);
             if (result != null && result.getSchedules() != null) {
                 schedules = result.getSchedules();
             }
             recommendation = result != null ? result.getRecommendation() : null;
         } catch (Exception e) {
-            recommendation = modelResponse;
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("解析 AI 排班 JSON 失败: " + e.getMessage());
+            response.setRecommendedSchedules(Collections.emptyList());
+            response.setRecommendation(modelResponse);
+            return response;
         }
 
         if (schedules == null) {
             schedules = Collections.emptyList();
+        }
+
+        boolean hasDoctorId = schedules.stream()
+                .anyMatch(s -> s != null && s.getDoctorId() != null);
+        if (schedules.isEmpty() || !hasDoctorId) {
+            response.setCode(ToBCodeEnum.FAIL);
+            response.setMessage("AI 未返回有效推荐：至少需要一条包含 doctorId（医生用户 ID，须与 Observation 中 doctors[].doctorId 一致）的日程");
+            response.setRecommendedSchedules(schedules);
+            response.setRecommendation(
+                    recommendation == null || recommendation.isEmpty() ? jsonPayload : recommendation
+            );
+            return response;
         }
 
         response.setRecommendedSchedules(schedules);
@@ -82,28 +138,105 @@ public class SmartScheduleServiceImpl implements AIScheduleAPI {
         return response;
     }
 
-    private String buildUserPrompt(GenerateScheduleRequest request) {
+    /**
+     * 从 availability JSON 中取出前 {@code limit} 个 {@code doctorId}，用于可选的明细查询。
+     */
+    private static List<Long> extractTopDoctorIds(String availabilityJson, int limit) {
+        List<Long> ids = new ArrayList<>();
+        if (availabilityJson == null || availabilityJson.isEmpty() || limit <= 0) {
+            return ids;
+        }
+        try {
+            JsonObject root = JsonParser.parseString(availabilityJson).getAsJsonObject();
+            if (root.has("error")) {
+                return ids;
+            }
+            JsonArray doctors = root.getAsJsonArray("doctors");
+            if (doctors == null) {
+                return ids;
+            }
+            for (JsonElement el : doctors) {
+                if (!el.isJsonObject()) {
+                    continue;
+                }
+                JsonObject d = el.getAsJsonObject();
+                if (d.has("doctorId") && !d.get("doctorId").isJsonNull()) {
+                    ids.add(d.get("doctorId").getAsLong());
+                    if (ids.size() >= limit) {
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析 availability JSON 以提取 doctorId 失败: {}", e.getMessage());
+        }
+        return ids;
+    }
+
+    private String buildUserPromptWithObservations(
+            GenerateScheduleRequest request,
+            String toolScheduleDay,
+            String availabilityObservation,
+            List<String> detailObservations) {
+
         StringBuilder sb = new StringBuilder();
-        
-        sb.append("请为以下排班需求生成推荐：\n\n");
-        sb.append("**预约日期**: ").append(request.getScheduleDay()).append("\n");
-        
+        sb.append("## 排班任务\n\n");
+        sb.append("**预约日期(上游原始值)**: ").append(request.getScheduleDay()).append("\n");
+        sb.append("**工具用 scheduleDay（YYYY-MM-DD）**: ").append(toolScheduleDay).append("\n");
+
         if (request.getBusinessRequirement() != null && !request.getBusinessRequirement().isEmpty()) {
             sb.append("**业务需求**: ").append(request.getBusinessRequirement()).append("\n");
         }
-        
         if (Boolean.TRUE.equals(request.getSpecifyDoctor())) {
             sb.append("**是否指定医生**: 是\n");
             if (request.getDoctorId() != null) {
-                sb.append("**指定医生ID**: ").append(request.getDoctorId()).append("\n");
+                sb.append("**指定医生用户 ID**: ").append(request.getDoctorId()).append("\n");
             }
         } else {
             sb.append("**是否指定医生**: 否\n");
         }
-        
-        sb.append("\n请根据 smart-schedule-assistant 技能的指导，选择合适的技能组合，调用工具获取数据，并生成排班推荐。");
-        
+
+        sb.append("\n## Observation · queryDoctorAvailabilityForDay\n\n");
+        sb.append(availabilityObservation).append("\n");
+
+        int idx = 1;
+        for (String detail : detailObservations) {
+            sb.append("\n## Observation · queryDoctorScheduleDetailForDay (候选 ").append(idx++).append(")\n\n");
+            sb.append(detail).append("\n");
+        }
+
+        sb.append("\n---\n");
+        sb.append("请根据以上 Observation **直接输出**最终纯 JSON（`schedules` + `recommendation`），不要描述调用工具，不要使用 Markdown 代码块。\n");
         return sb.toString();
     }
 
+    private static String normalizeScheduleDayForDoctorDb(String scheduleDay) {
+        if (scheduleDay == null) {
+            return "";
+        }
+        String s = scheduleDay.trim();
+        if (s.matches("\\d{8}")) {
+            return s.substring(0, 4) + "-" + s.substring(4, 6) + "-" + s.substring(6, 8);
+        }
+        return s;
+    }
+
+    private static String trimJsonFence(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String s = raw.trim();
+        if (s.startsWith("```")) {
+            int firstNl = s.indexOf('\n');
+            if (firstNl > 0) {
+                s = s.substring(firstNl + 1);
+            }
+            int endFence = s.lastIndexOf("```");
+            if (endFence >= 0) {
+                s = s.substring(0, endFence);
+            }
+            return s.trim();
+        }
+        return s;
+    }
 }

@@ -3,6 +3,7 @@ package com.zixin.messageconsumer.controller;
 import com.zixin.messageapi.api.MessageAPI;
 import com.zixin.messageapi.dto.*;
 import com.zixin.messageapi.vo.MessageVO;
+import com.zixin.messageconsumer.client.EmailClient;
 import com.zixin.utils.context.UserInfoManager;
 import com.zixin.utils.exception.ToBCodeEnum;
 import com.zixin.utils.utils.Result;
@@ -32,7 +33,13 @@ public class MessageController {
     
     @DubboReference(check = false)
     private MessageAPI messageAPI;
-    
+
+    private final EmailClient emailClient;
+
+    public MessageController(EmailClient emailClient) {
+        this.emailClient = emailClient;
+    }
+
     /**
      * 查询收件箱
      *
@@ -181,5 +188,16 @@ public class MessageController {
         } else {
             return Result.error();
         }
+    }
+
+    /**
+     * 异步发送邮件
+     */
+    @PostMapping("/send_email")
+    public Result<Boolean> sendEmail(@RequestParam("message") String content, @RequestParam("receiverId") Long to, @RequestParam("title") String title) {
+        if(emailClient.sendEmail(UserInfoManager.getUserId(), to, UserInfoManager.getUsername(), title, content)){
+            return Result.success();
+        }
+        return Result.error();
     }
 }

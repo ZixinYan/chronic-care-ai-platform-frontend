@@ -70,14 +70,20 @@ public class DoctorWorkbenchServiceImpl implements DoctorWorkbenchAPI {
                     request.getPageSize()
             );
 
-            // 2. 构建查询条件
+            // 2. 构建查询条件（doctorId、scheduleDay 至少填一项；仅 scheduleDay 时用于 AI 跨医生按日聚合）
+            if (request.getDoctorId() == null
+                    && (request.getScheduleDay() == null || request.getScheduleDay().isEmpty())) {
+                response.setCode(ToBCodeEnum.FAIL);
+                response.setMessage("doctorId 与 scheduleDay 不能同时为空");
+                return response;
+            }
+
             LambdaQueryWrapper<DoctorSchedule> wrapper = new LambdaQueryWrapper<>();
 
-            // 医生ID是必填条件
-            wrapper.eq(DoctorSchedule::getDoctorId, request.getDoctorId());
-
-            // 可选条件
-            if (request.getScheduleDay() != null) {
+            if (request.getDoctorId() != null) {
+                wrapper.eq(DoctorSchedule::getDoctorId, request.getDoctorId());
+            }
+            if (request.getScheduleDay() != null && !request.getScheduleDay().isEmpty()) {
                 wrapper.eq(DoctorSchedule::getScheduleDay, request.getScheduleDay());
             }
             if (request.getStatus() != null) {

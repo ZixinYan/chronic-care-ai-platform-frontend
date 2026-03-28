@@ -43,23 +43,24 @@ public class DoctorScheduleTools {
     public String queryDoctorAvailabilityForDay(String scheduleDay, String businessRequirement) {
         log.info("[Tool] queryDoctorAvailabilityForDay, scheduleDay={}, businessRequirement={}", scheduleDay, businessRequirement);
 
-        if (scheduleDay == null || scheduleDay.isEmpty()) {
+        String normalizedDay = normalizeScheduleDay(scheduleDay);
+        if (normalizedDay == null || normalizedDay.isEmpty()) {
             return "{\"error\":\"scheduleDay is required\"}";
         }
 
         try {
-            // 1. 查询该日所有日程记录
-            List<ScheduleVO> schedules = querySchedulesByDay(scheduleDay);
+            // 1. 查询该日所有日程记录（按日跨医生，doctorId 可为空）
+            List<ScheduleVO> schedules = querySchedulesByDay(normalizedDay);
             
             // 2. 按医生聚合，并补齐医生画像信息
             List<DoctorAvailability> doctorAvailabilities = aggregateDoctorAvailability(schedules);
             
             // 3. 构建结果并返回
-            DoctorAvailabilityResult result = new DoctorAvailabilityResult(scheduleDay, businessRequirement, doctorAvailabilities);
+            DoctorAvailabilityResult result = new DoctorAvailabilityResult(normalizedDay, businessRequirement, doctorAvailabilities);
             return gson.toJson(result);
         } catch (Exception e) {
             log.error("Failed to query doctor availability", e);
-            return gson.toJson(new DoctorAvailabilityResult(scheduleDay, businessRequirement, new ArrayList<>()));
+            return gson.toJson(new DoctorAvailabilityResult(normalizedDay, businessRequirement, new ArrayList<>()));
         }
     }
 
@@ -69,14 +70,14 @@ public class DoctorScheduleTools {
     @Tool(name = "queryDoctorScheduleDetailForDay", description = "根据医生ID和日期查询医生当日的详细排班信息，返回 JSON 列表")
     public String queryDoctorScheduleDetailForDay(Long doctorId, String scheduleDay) {
         log.info("[Tool] queryDoctorScheduleDetailForDay, doctorId={}, scheduleDay={}", doctorId, scheduleDay);
-
-        if (doctorId == null || scheduleDay == null || scheduleDay.isEmpty()) {
+        String normalizedDay = normalizeScheduleDay(scheduleDay);
+        if (doctorId == null || normalizedDay == null || normalizedDay.isEmpty()) {
             return "{\"error\":\"doctorId and scheduleDay are required\"}";
         }
 
         try {
             // 查询指定医生在指定日期的日程
-            List<ScheduleVO> schedules = querySchedulesByDoctorAndDay(doctorId, scheduleDay);
+            List<ScheduleVO> schedules = querySchedulesByDoctorAndDay(doctorId, normalizedDay);
             return gson.toJson(schedules);
         } catch (Exception e) {
             log.error("Failed to query doctor schedule detail", e);
@@ -87,6 +88,23 @@ public class DoctorScheduleTools {
     /**
      * 根据日期查询所有日程
      */
+    /**
+     * 将 yyyyMMdd、yyyy-MM-dd 等统一为库表使用的 yyyy-MM-dd。
+     */
+    private static String normalizeScheduleDay(String scheduleDay) {
+        if (scheduleDay == null) {
+            return null;
+        }
+        String s = scheduleDay.trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        if (s.matches("\\d{8}")) {
+            return s.substring(0, 4) + "-" + s.substring(4, 6) + "-" + s.substring(6, 8);
+        }
+        return s;
+    }
+
     private List<ScheduleVO> querySchedulesByDay(String scheduleDay) {
         QueryScheduleRequest request = new QueryScheduleRequest();
         request.setScheduleDay(scheduleDay);

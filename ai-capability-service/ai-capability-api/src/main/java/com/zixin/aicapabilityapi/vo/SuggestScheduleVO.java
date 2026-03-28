@@ -15,9 +15,17 @@ public class SuggestScheduleVO implements Serializable {
      */
     private Long id;
     /**
+     * 医生Id
+     */
+    private Long doctorId;
+    /**
      * 医生姓名
      */
     private String doctorName;
+    /**
+     * 患者id
+     */
+    private Long patientId;
     /**
      * 患者姓名
      */
