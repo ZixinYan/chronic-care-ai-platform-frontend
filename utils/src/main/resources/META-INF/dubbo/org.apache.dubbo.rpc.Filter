@@ -1,2 +1,0 @@
-traceIdConsumerFilter=com.zixin.utils.interceptor.TraceIdConsumerFilter
-traceIdProviderFilter=com.zixin.utils.interceptor.TraceIdProviderFilter
