@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.zixin.accountprovider.mapper.RolePermissionMapper">
+
+    <select id="selectByRoleCodes"
+            resultType="com.zixin.accountapi.po.RolePermission">
+        select
+        id,
+        role_code,
+        action_code,
+        create_time
+        from care_platform_role_permission
+        where role_code in
+        <foreach collection="roleCodes"
+                 item="code"
+                 open="("
+                 separator=","
+                 close=")">
+            #{code}
+        </foreach>
+
+    </select>
+
+</mapper>
