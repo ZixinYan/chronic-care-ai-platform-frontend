@@ -8,16 +8,16 @@
 
       <el-descriptions :column="2" border>
         <el-descriptions-item label="日程日期">{{ scheduleDetail.scheduleDay }}</el-descriptions-item>
-        <el-descriptions-item label="日程时间">{{ scheduleDetail.scheduleTime }}</el-descriptions-item>
+        <el-descriptions-item label="日程时间">{{ scheduleDetail.startTimeStr }} - {{ scheduleDetail.endTimeStr }}</el-descriptions-item>
         <el-descriptions-item label="患者姓名">{{ scheduleDetail.patientName }}</el-descriptions-item>
         <el-descriptions-item label="日程类型">
-          <el-tag :type="getScheduleTypeTag(scheduleDetail.type)">{{ scheduleDetail.typeText }}</el-tag>
+          <el-tag :type="getScheduleTypeTag(scheduleDetail.scheduleCategory)">{{ scheduleDetail.scheduleCategoryName }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="getStatusTag(scheduleDetail.status)">{{ getStatusText(scheduleDetail.status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ scheduleDetail.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="日程内容" :span="2">{{ scheduleDetail.content }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatCreateTime(scheduleDetail.createTime) }}</el-descriptions-item>
+        <el-descriptions-item label="日程内容" :span="2">{{ scheduleDetail.schedule }}</el-descriptions-item>
         <el-descriptions-item v-if="scheduleDetail.cancelReason" label="取消原因" :span="2">
           {{ scheduleDetail.cancelReason }}
         </el-descriptions-item>
@@ -26,23 +26,23 @@
       <div v-if="scheduleDetail.status === 'COMPLETED'" class="diagnosis-report mt-20">
         <h4>诊断报告</h4>
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="诊断结果">{{ scheduleDetail.diagnosisResult }}</el-descriptions-item>
-          <el-descriptions-item label="治疗方案">{{ scheduleDetail.treatmentPlan }}</el-descriptions-item>
-          <el-descriptions-item label="医嘱">{{ scheduleDetail.medicalAdvice }}</el-descriptions-item>
+          <el-descriptions-item label="诊断结果">{{ scheduleDetail.diagnosisReport }}</el-descriptions-item>
+          <el-descriptions-item label="处方信息">{{ scheduleDetail.prescription }}</el-descriptions-item>
+          <el-descriptions-item label="备注">{{ scheduleDetail.notes }}</el-descriptions-item>
         </el-descriptions>
       </div>
 
       <div v-if="showCompleteForm" class="complete-form mt-20">
         <h4>完成日程 - 上传诊断报告</h4>
         <el-form ref="completeFormRef" :model="completeForm" :rules="completeRules" label-width="100px">
-          <el-form-item label="诊断结果" prop="diagnosisResult">
-            <el-input v-model="completeForm.diagnosisResult" type="textarea" :rows="3" placeholder="请输入诊断结果" />
+          <el-form-item label="诊断报告" prop="diagnosisReport">
+            <el-input v-model="completeForm.diagnosisReport" type="textarea" :rows="3" placeholder="请输入诊断报告" />
           </el-form-item>
-          <el-form-item label="治疗方案" prop="treatmentPlan">
-            <el-input v-model="completeForm.treatmentPlan" type="textarea" :rows="3" placeholder="请输入治疗方案" />
+          <el-form-item label="处方信息" prop="prescription">
+            <el-input v-model="completeForm.prescription" type="textarea" :rows="3" placeholder="请输入处方信息" />
           </el-form-item>
-          <el-form-item label="医嘱" prop="medicalAdvice">
-            <el-input v-model="completeForm.medicalAdvice" type="textarea" :rows="3" placeholder="请输入医嘱" />
+          <el-form-item label="备注" prop="notes">
+            <el-input v-model="completeForm.notes" type="textarea" :rows="3" placeholder="请输入备注" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :loading="submitLoading" @click="submitComplete">提交</el-button>
@@ -75,34 +75,40 @@ const completeFormRef = ref(null)
 const scheduleDetail = ref({
   id: null,
   scheduleDay: '',
-  scheduleTime: '',
+  startTimeStr: '',
+  endTimeStr: '',
   patientName: '',
   patientId: null,
-  type: '',
-  typeText: '',
+  scheduleCategory: '',
+  scheduleCategoryName: '',
   status: '',
-  content: '',
-  createTime: '',
+  schedule: '',
+  createTime: null,
   cancelReason: '',
-  diagnosisResult: '',
-  treatmentPlan: '',
-  medicalAdvice: ''
+  diagnosisReport: '',
+  prescription: '',
+  notes: ''
 })
 
 const completeForm = reactive({
-  diagnosisResult: '',
-  treatmentPlan: '',
-  medicalAdvice: ''
+  diagnosisReport: '',
+  prescription: '',
+  notes: ''
 })
 
 const completeRules = {
-  diagnosisResult: [{ required: true, message: '请输入诊断结果', trigger: 'blur' }],
-  treatmentPlan: [{ required: true, message: '请输入治疗方案', trigger: 'blur' }]
+  diagnosisReport: [{ required: true, message: '请输入诊断报告', trigger: 'blur' }],
+  prescription: [{ required: true, message: '请输入处方信息', trigger: 'blur' }]
 }
 
-const getScheduleTypeTag = (type) => {
-  const tags = { FOLLOW_UP: 'primary', CONSULTATION: 'success', EXAMINATION: 'warning', OTHER: 'info' }
-  return tags[type] || 'info'
+const getScheduleTypeTag = (category) => {
+  const tags = { 
+    FOLLOW_UP: 'primary', 
+    CONSULTATION: 'success', 
+    EXAMINATION: 'warning', 
+    OTHER: 'info' 
+  }
+  return tags[category] || 'info'
 }
 
 const getStatusTag = (status) => {
@@ -113,6 +119,18 @@ const getStatusTag = (status) => {
 const getStatusText = (status) => {
   const texts = { PENDING: '待处理', IN_PROGRESS: '进行中', COMPLETED: '已完成', CANCELLED: '已取消' }
   return texts[status] || '未知'
+}
+
+const formatCreateTime = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
 const fetchScheduleDetail = async () => {

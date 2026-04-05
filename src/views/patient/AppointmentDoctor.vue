@@ -12,12 +12,12 @@
               <el-input v-model="queryParams.name" placeholder="请输入医生姓名" clearable />
             </el-form-item>
             <el-form-item label="科室">
-              <el-select v-model="queryParams.department" placeholder="请选择科室" clearable>
-                <el-option label="内科" value="INTERNAL" />
-                <el-option label="内分泌科" value="ENDOCRINE" />
-                <el-option label="心血管科" value="CARDIOVASCULAR" />
-                <el-option label="神经内科" value="NEUROLOGY" />
-                <el-option label="全科" value="GENERAL" />
+              <el-select v-model="queryParams.department" placeholder="请选择科室" clearable style="width: 140px">
+                <el-option label="内科" value="内科" />
+                <el-option label="内分泌科" value="内分泌科" />
+                <el-option label="心血管科" value="心血管科" />
+                <el-option label="神经内科" value="神经内科" />
+                <el-option label="全科" value="全科" />
               </el-select>
             </el-form-item>
             <el-form-item>
@@ -28,24 +28,24 @@
 
           <div class="doctor-list">
             <div 
-              v-for="doctor in doctorList" 
+              v-for="doctor in filteredDoctorList" 
               :key="doctor.id" 
               class="doctor-card"
               :class="{ selected: selectedDoctor?.id === doctor.id }"
               @click="selectDoctor(doctor)"
             >
               <div class="doctor-avatar">
-                <el-avatar :size="60" :src="doctor.avatar">
-                  {{ doctor.name?.charAt(0) }}
+                <el-avatar :size="60" :src="doctor.avatarUrl">
+                  {{ doctor.username?.charAt(0) }}
                 </el-avatar>
               </div>
               <div class="doctor-info">
                 <div class="doctor-name">
-                  {{ doctor.name }}
+                  {{ doctor.username }}
                   <el-tag size="small" type="primary">{{ doctor.title }}</el-tag>
                 </div>
-                <div class="doctor-department">{{ doctor.departmentName }}</div>
-                <div class="doctor-specialty">擅长：{{ doctor.specialty }}</div>
+                <div class="doctor-department">{{ doctor.department }}</div>
+                <div class="doctor-specialty">擅长：{{ doctor.bio || '暂无介绍' }}</div>
               </div>
             </div>
           </div>
@@ -53,12 +53,10 @@
           <el-pagination
             v-model:current-page="queryParams.pageNum"
             v-model:page-size="queryParams.pageSize"
-            :total="total"
+            :total="filteredTotal"
             :page-sizes="[6, 12, 24]"
             layout="total, sizes, prev, pager, next"
             class="pagination"
-            @size-change="fetchDoctorList"
-            @current-change="fetchDoctorList"
           />
         </div>
       </el-col>
@@ -75,12 +73,12 @@
 
           <div v-else>
             <div class="selected-doctor-info">
-              <el-avatar :size="50" :src="selectedDoctor.avatar">
-                {{ selectedDoctor.name?.charAt(0) }}
+              <el-avatar :size="50" :src="selectedDoctor.avatarUrl">
+                {{ selectedDoctor.username?.charAt(0) }}
               </el-avatar>
               <div class="doctor-detail">
-                <div class="name">{{ selectedDoctor.name }}</div>
-                <div class="department">{{ selectedDoctor.departmentName }}</div>
+                <div class="name">{{ selectedDoctor.username }}</div>
+                <div class="department">{{ selectedDoctor.department }}</div>
               </div>
             </div>
 
@@ -152,7 +150,7 @@
             <div v-for="item in myAppointments" :key="item.id" class="appointment-item">
               <div class="appointment-info">
                 <div class="doctor-name">{{ item.doctorName }}</div>
-                <div class="appointment-time">{{ item.appointmentDate }} {{ item.timeSlot }}</div>
+                <div class="appointment-time">{{ item.scheduleDay }}</div>
               </div>
               <el-tag :type="getStatusTag(item.status)" size="small">
                 {{ getStatusText(item.status) }}
@@ -167,13 +165,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 import doctorApi from '@/api/doctor'
+
+const userStore = useUserStore()
 
 const loading = ref(false)
 const submitting = ref(false)
-const total = ref(0)
 const selectedDoctor = ref(null)
 const appointmentFormRef = ref(null)
 
@@ -184,11 +184,46 @@ const queryParams = reactive({
   pageSize: 6
 })
 
-const doctorList = ref([
-  { id: 1, name: '张医生', title: '主任医师', departmentName: '内分泌科', specialty: '糖尿病、甲状腺疾病' },
-  { id: 2, name: '李医生', title: '副主任医师', departmentName: '心血管科', specialty: '高血压、冠心病' },
-  { id: 3, name: '王医生', title: '主治医师', departmentName: '内科', specialty: '常见病、慢性病管理' }
-])
+const doctorList = ref([])
+
+const filteredTotal = computed(() => {
+  let result = doctorList.value
+  
+  if (queryParams.name) {
+    result = result.filter(doctor => 
+      doctor.username && doctor.username.includes(queryParams.name)
+    )
+  }
+  
+  if (queryParams.department) {
+    result = result.filter(doctor => 
+      doctor.department && doctor.department === queryParams.department
+    )
+  }
+  
+  return result.length
+})
+
+const filteredDoctorList = computed(() => {
+  let result = doctorList.value
+  
+  if (queryParams.name) {
+    result = result.filter(doctor => 
+      doctor.username && doctor.username.includes(queryParams.name)
+    )
+  }
+  
+  if (queryParams.department) {
+    result = result.filter(doctor => 
+      doctor.department && doctor.department === queryParams.department
+    )
+  }
+  
+  const start = (queryParams.pageNum - 1) * queryParams.pageSize
+  const end = start + queryParams.pageSize
+  
+  return result.slice(start, end)
+})
 
 const appointmentForm = reactive({
   appointmentDate: '',
@@ -213,10 +248,7 @@ const availableSlots = ref([
   { label: '下午 16:00-17:00', value: '16:00-17:00', disabled: false }
 ])
 
-const myAppointments = ref([
-  { id: 1, doctorName: '张医生', appointmentDate: '2024-01-20', timeSlot: '09:00-10:00', status: 'PENDING' },
-  { id: 2, doctorName: '李医生', appointmentDate: '2024-01-18', timeSlot: '14:00-15:00', status: 'CONFIRMED' }
-])
+const myAppointments = ref([])
 
 const getStatusText = (status) => {
   const texts = { PENDING: '待确认', CONFIRMED: '已确认', CANCELLED: '已取消', COMPLETED: '已完成' }
@@ -235,28 +267,41 @@ const disabledDate = (date) => {
 const fetchDoctorList = async () => {
   loading.value = true
   try {
-    const res = await doctorApi.getMyPatients(queryParams)
+    const res = await doctorApi.getDoctorList()
     if (res.code === 0) {
-      doctorList.value = res.data?.list || doctorList.value
-      total.value = res.data?.total || 0
+      doctorList.value = res.data || []
     }
   } catch (error) {
     console.error('获取医生列表失败:', error)
+    ElMessage.error('获取医生列表失败')
   } finally {
     loading.value = false
   }
 }
 
+const fetchMyAppointments = async () => {
+  try {
+    const res = await doctorApi.getPatientSchedules({
+      patientId: userStore.userId,
+      pageNum: 1,
+      pageSize: 5
+    })
+    if (res.code === 0) {
+      myAppointments.value = res.data.schedules?.list || []
+    }
+  } catch (error) {
+    console.error('获取预约记录失败:', error)
+  }
+}
+
 const handleSearch = () => {
   queryParams.pageNum = 1
-  fetchDoctorList()
 }
 
 const handleReset = () => {
   queryParams.name = ''
   queryParams.department = ''
   queryParams.pageNum = 1
-  fetchDoctorList()
 }
 
 const selectDoctor = (doctor) => {
@@ -274,11 +319,22 @@ const handleSubmitAppointment = async () => {
   await appointmentFormRef.value.validate(async (valid) => {
     if (!valid) return
 
+    const [startTimeStr, endTimeStr] = appointmentForm.timeSlot.split('-')
+
     submitting.value = true
     try {
       const res = await doctorApi.addSchedule({
-        doctorId: selectedDoctor.value.id,
-        ...appointmentForm
+        doctorId: selectedDoctor.value.userId,
+        patientId: userStore.userId,
+        scheduleDay: appointmentForm.appointmentDate,
+        schedule: appointmentForm.description,
+        scheduleCategory: '门诊',
+        startTimeStr,
+        endTimeStr,
+        ext: {
+          timeSlot: appointmentForm.timeSlot,
+          visitType: appointmentForm.visitType
+        }
       })
       if (res.code === 0) {
         ElMessage.success('预约成功')
@@ -288,6 +344,7 @@ const handleSubmitAppointment = async () => {
           visitType: '',
           description: ''
         })
+        fetchMyAppointments()
       }
     } catch (error) {
       console.error('预约失败:', error)
@@ -298,7 +355,8 @@ const handleSubmitAppointment = async () => {
 }
 
 onMounted(() => {
-  // fetchDoctorList()
+  fetchDoctorList()
+  fetchMyAppointments()
 })
 </script>
 

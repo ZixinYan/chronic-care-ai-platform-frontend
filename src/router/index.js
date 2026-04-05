@@ -87,15 +87,9 @@ const routes = [
   {
     path: '/doctor',
     component: () => import('@/layouts/DefaultLayout.vue'),
-    redirect: '/doctor/workbench',
+    redirect: '/doctor/schedule',
     meta: { roles: ['DOCTOR'] },
     children: [
-      {
-        path: 'workbench',
-        name: 'DoctorWorkbench',
-        component: () => import('@/views/doctor/Workbench.vue'),
-        meta: { title: '医生工作台', requiresAuth: true, roles: ['DOCTOR'] }
-      },
       {
         path: 'schedule',
         name: 'DoctorSchedule',
@@ -107,12 +101,6 @@ const routes = [
         name: 'ScheduleDetail',
         component: () => import('@/views/doctor/ScheduleDetail.vue'),
         meta: { title: '日程详情', requiresAuth: true, roles: ['DOCTOR'] }
-      },
-      {
-        path: 'patients',
-        name: 'DoctorPatients',
-        component: () => import('@/views/doctor/Patients.vue'),
-        meta: { title: '患者管理', requiresAuth: true, roles: ['DOCTOR'] }
       },
       {
         path: 'patient/:id',
@@ -131,6 +119,12 @@ const routes = [
         name: 'ReportApproval',
         component: () => import('@/views/doctor/ReportApproval.vue'),
         meta: { title: '报告审批', requiresAuth: true, roles: ['DOCTOR'] }
+      },
+      {
+        path: 'report/:id',
+        name: 'DoctorReportDetail',
+        component: () => import('@/views/doctor/ReportDetail.vue'),
+        meta: { title: '报告详情', requiresAuth: true, roles: ['DOCTOR'] }
       }
     ]
   },
@@ -157,6 +151,12 @@ const routes = [
         name: 'AdminRoles',
         component: () => import('@/views/admin/RoleManagement.vue'),
         meta: { title: '角色管理', requiresAuth: true, roles: ['ADMIN'] }
+      },
+      {
+        path: 'leave-approval',
+        name: 'AdminLeaveApproval',
+        component: () => import('@/views/admin/LeaveApproval.vue'),
+        meta: { title: '休假审批', requiresAuth: true, roles: ['ADMIN'] }
       }
     ]
   },
@@ -211,19 +211,6 @@ const routes = [
     ]
   },
   {
-    path: '/ai',
-    component: () => import('@/layouts/DefaultLayout.vue'),
-    redirect: '/ai/schedule',
-    children: [
-      {
-        path: 'schedule',
-        name: 'AISchedule',
-        component: () => import('@/views/ai/Schedule.vue'),
-        meta: { title: 'AI日程生成', requiresAuth: true }
-      }
-    ]
-  },
-  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/error/404.vue'),
@@ -254,7 +241,15 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.roles && to.meta.roles.length > 0) {
     if (!userStore.hasAnyRole(to.meta.roles)) {
-      next({ name: 'Workbench' })
+      if (userStore.hasRole('PATIENT')) {
+        next({ name: 'PatientDashboard' })
+      } else if (userStore.hasRole('DOCTOR')) {
+        next({ name: 'DoctorSchedule' })
+      } else if (userStore.hasRole('ADMIN')) {
+        next({ name: 'AdminWorkbench' })
+      } else {
+        next({ name: 'Workbench' })
+      }
       return
     }
   }

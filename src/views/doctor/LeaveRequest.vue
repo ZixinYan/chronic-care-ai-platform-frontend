@@ -14,8 +14,8 @@
             <el-tag :type="getLeaveTypeTag(row.leaveType)">{{ getLeaveTypeText(row.leaveType) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="startTime" label="开始时间" width="180" />
-        <el-table-column prop="endTime" label="结束时间" width="180" />
+        <el-table-column prop="startDay" label="开始日期" width="120" />
+        <el-table-column prop="endDay" label="结束日期" width="120" />
         <el-table-column prop="reason" label="请假原因" min-width="150" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
@@ -68,22 +68,22 @@
             <el-option label="其他" value="OTHER" />
           </el-select>
         </el-form-item>
-        <el-form-item label="开始时间" prop="startTime">
+        <el-form-item label="开始时间" prop="startDay">
           <el-date-picker
-            v-model="leaveForm.startTime"
-            type="datetime"
-            placeholder="选择开始时间"
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DD HH:mm:ss"
+            v-model="leaveForm.startDay"
+            type="date"
+            placeholder="选择开始日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
           />
         </el-form-item>
-        <el-form-item label="结束时间" prop="endTime">
+        <el-form-item label="结束时间" prop="endDay">
           <el-date-picker
-            v-model="leaveForm.endTime"
-            type="datetime"
-            placeholder="选择结束时间"
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DD HH:mm:ss"
+            v-model="leaveForm.endDay"
+            type="date"
+            placeholder="选择结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
           />
         </el-form-item>
         <el-form-item label="请假原因" prop="reason">
@@ -120,15 +120,15 @@ const leaveList = ref([])
 const leaveForm = reactive({
   leaveId: null,
   leaveType: '',
-  startTime: '',
-  endTime: '',
+  startDay: '',
+  endDay: '',
   reason: ''
 })
 
 const leaveRules = {
   leaveType: [{ required: true, message: '请选择请假类型', trigger: 'change' }],
-  startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
-  endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }],
+  startDay: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
+  endDay: [{ required: true, message: '请选择结束日期', trigger: 'change' }],
   reason: [{ required: true, message: '请输入请假原因', trigger: 'blur' }]
 }
 
@@ -155,10 +155,17 @@ const getStatusTag = (status) => {
 const fetchLeaveList = async () => {
   loading.value = true
   try {
-    const res = await doctorApi.getLeaveList(queryParams)
+    const today = new Date().toISOString().split('T')[0]
+    const res = await doctorApi.getLeaveList({
+      ...queryParams,
+      startDay: today
+    })
     if (res.code === 0) {
-      leaveList.value = res.data?.list || []
-      total.value = res.data?.total || 0
+      const allLeaves = res.data?.leaves?.list || []
+      leaveList.value = allLeaves.filter(leave => {
+        return leave.endDay >= today
+      })
+      total.value = leaveList.value.length
     }
   } catch (error) {
     console.error('获取请假列表失败:', error)
@@ -172,8 +179,8 @@ const handleAddLeave = () => {
   Object.assign(leaveForm, {
     leaveId: null,
     leaveType: '',
-    startTime: '',
-    endTime: '',
+    startDay: '',
+    endDay: '',
     reason: ''
   })
   dialogVisible.value = true
@@ -184,8 +191,8 @@ const handleEditLeave = (row) => {
   Object.assign(leaveForm, {
     leaveId: row.id,
     leaveType: row.leaveType,
-    startTime: row.startTime,
-    endTime: row.endTime,
+    startDay: row.startDay,
+    endDay: row.endDay,
     reason: row.reason
   })
   dialogVisible.value = true

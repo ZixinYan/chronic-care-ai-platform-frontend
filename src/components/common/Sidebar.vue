@@ -16,7 +16,7 @@
         active-text-color="#409eff"
         router
       >
-        <el-menu-item index="/workbench">
+        <el-menu-item v-if="userStore.hasRole('ADMIN')" index="/workbench">
           <el-icon><HomeFilled /></el-icon>
           <template #title>工作台</template>
         </el-menu-item>
@@ -30,6 +30,7 @@
             <el-menu-item index="/admin/workbench">管理后台</el-menu-item>
             <el-menu-item index="/admin/users">用户管理</el-menu-item>
             <el-menu-item index="/admin/roles">角色管理</el-menu-item>
+            <el-menu-item index="/admin/leave-approval">休假审批</el-menu-item>
           </el-sub-menu>
         </template>
 
@@ -52,11 +53,9 @@
               <el-icon><Avatar /></el-icon>
               <span>医生工作台</span>
             </template>
-            <el-menu-item index="/doctor/workbench">工作台</el-menu-item>
             <el-menu-item index="/doctor/schedule">日程管理</el-menu-item>
             <el-menu-item index="/doctor/leave">请假申请</el-menu-item>
             <el-menu-item index="/doctor/report-approval">报告审批</el-menu-item>
-            <el-menu-item index="/doctor/patients">患者管理</el-menu-item>
           </el-sub-menu>
         </template>
 
@@ -70,14 +69,6 @@
             <el-badge v-if="appStore.unreadMessageCount > 0" :value="appStore.unreadMessageCount" class="menu-badge" />
           </el-menu-item>
           <el-menu-item index="/message/sent">发件箱</el-menu-item>
-        </el-sub-menu>
-
-        <el-sub-menu index="ai">
-          <template #title>
-            <el-icon><MagicStick /></el-icon>
-            <span>AI能力</span>
-          </template>
-          <el-menu-item index="/ai/schedule">AI日程生成</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="user">
@@ -102,7 +93,6 @@ import {
   User, 
   Avatar, 
   Message, 
-  MagicStick, 
   Setting,
   FirstAidKit 
 } from '@element-plus/icons-vue'

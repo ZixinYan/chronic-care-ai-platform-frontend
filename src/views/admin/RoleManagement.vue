@@ -18,7 +18,6 @@
             <li><strong>管理员(ADMIN)</strong>：拥有系统全部权限，可管理用户和角色</li>
             <li><strong>医生(DOCTOR)</strong>：可管理患者、查看报告、安排日程</li>
             <li><strong>患者(PATIENT)</strong>：可查看个人健康数据、上传报告、预约医生</li>
-            <li><strong>家属(FAMILY)</strong>：可查看关联患者的健康数据</li>
           </ul>
         </template>
       </el-alert>
@@ -85,7 +84,6 @@ const userStats = ref({})
 const rolePermissions = {
   1: ['患者管理', '日程管理', '报告审批', '请假申请', '查看患者信息'],
   2: ['查看健康报告', '上传报告', '血糖预测', '预约医生', '查看个人信息'],
-  3: ['查看关联患者信息', '查看健康报告'],
   4: ['用户管理', '角色管理', '系统配置', '全部权限']
 }
 
@@ -101,7 +99,6 @@ const getRoleIcon = (code) => {
   const icons = {
     1: Avatar,
     2: User,
-    3: UserFilled,
     4: Setting
   }
   return icons[code] || User
@@ -111,7 +108,6 @@ const getRoleIconClass = (code) => {
   const classes = {
     1: 'doctor-icon',
     2: 'patient-icon',
-    3: 'family-icon',
     4: 'admin-icon'
   }
   return classes[code] || ''

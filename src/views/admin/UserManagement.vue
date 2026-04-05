@@ -84,15 +84,15 @@
           <el-input :value="currentUser?.username" disabled />
         </el-form-item>
         <el-form-item label="角色">
-          <el-checkbox-group v-model="roleForm.roleCodes">
-            <el-checkbox 
+          <el-radio-group v-model="roleForm.roleCode">
+            <el-radio 
               v-for="role in roleOptions" 
               :key="role.code" 
               :label="role.code"
             >
               {{ role.name }}
-            </el-checkbox>
-          </el-checkbox-group>
+            </el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -124,13 +124,12 @@ const queryParams = reactive({
 })
 
 const roleForm = reactive({
-  roleCodes: []
+  roleCode: null
 })
 
 const roleMap = {
   'DOCTOR': '医生',
   'PATIENT': '患者',
-  'FAMILY': '家属',
   'ADMIN': '管理员'
 }
 
@@ -142,7 +141,6 @@ const getRoleTagType = (role) => {
   const types = {
     'DOCTOR': 'success',
     'PATIENT': 'primary',
-    'FAMILY': 'warning',
     'ADMIN': 'danger'
   }
   return types[role] || 'info'
@@ -208,16 +206,21 @@ const handleCurrentChange = () => {
 
 const handleEditRoles = (row) => {
   currentUser.value = row
-  roleForm.roleCodes = row.roleCodes || []
+  roleForm.roleCode = row.roleCodes && row.roleCodes.length > 0 ? row.roleCodes[0] : null
   roleDialogVisible.value = true
 }
 
 const handleSaveRoles = async () => {
   if (!currentUser.value) return
   
+  if (!roleForm.roleCode) {
+    ElMessage.warning('请选择角色')
+    return
+  }
+  
   saveLoading.value = true
   try {
-    const res = await adminApi.updateUserRoles(currentUser.value.userId, roleForm.roleCodes)
+    const res = await adminApi.updateUserRoles(currentUser.value.userId, [roleForm.roleCode])
     if (res.code === 0) {
       ElMessage.success('角色分配成功')
       roleDialogVisible.value = false

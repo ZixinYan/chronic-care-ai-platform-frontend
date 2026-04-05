@@ -5,12 +5,49 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9336f976-70a0-4e88-9f96-aa387f1874a6" name="Changes" comment="init">
-      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/chronic-care-frontend.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/config/WebMvcConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/resources/bootstrap.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/resources/bootstrap.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/MarsCodeWorkspaceAppSettings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/MarsCodeWorkspaceAppSettings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/BloodGlucoseConsumerApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/BloodGlucoseConsumerApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/controller/GlucosePredictionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/controller/GlucosePredictionController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/resources/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/BloodGlucoseProviderApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/BloodGlucoseProviderApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/resources/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/admin.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/admin.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/ai.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/doctor.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/doctor.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/healthReport.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/healthReport.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/common/Sidebar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/common/Sidebar.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/router/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/request.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/admin/RoleManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/admin/RoleManagement.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/admin/UserManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/admin/UserManagement.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/ai/Schedule.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/auth/Login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/auth/Login.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/auth/Register.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/auth/Register.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/doctor/LeaveRequest.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/doctor/LeaveRequest.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/doctor/ReportApproval.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/doctor/ReportApproval.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/doctor/Schedule.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/doctor/Schedule.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/doctor/ScheduleDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/doctor/ScheduleDetail.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/doctor/Workbench.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/AppointmentDoctor.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/AppointmentDoctor.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/Dashboard.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/Dashboard.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/HealthReport.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/HealthReport.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/ReportDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/ReportDetail.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/UploadReport.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/UploadReport.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-api/src/main/java/com/zixin/healthcenterapi/dto/SaveTextReportRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-api/src/main/java/com/zixin/healthcenterapi/dto/SaveTextReportRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-api/src/main/java/com/zixin/healthcenterapi/vo/HealthReportVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-api/src/main/java/com/zixin/healthcenterapi/vo/HealthReportVO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-consumer/src/main/java/com/zixin/healthcenterconsumer/controller/GlucoseReportController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-consumer/src/main/java/com/zixin/healthcenterconsumer/controller/HealthReportController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-consumer/src/main/java/com/zixin/healthcenterconsumer/controller/HealthReportController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-provider/src/main/java/com/zixin/healthcenterprovider/service/HealthReportServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-provider/src/main/java/com/zixin/healthcenterprovider/service/HealthReportServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-provider/src/main/resources/bootstrap.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-provider/src/main/resources/bootstrap.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../utils/src/main/java/com/zixin/utils/security/SensitiveDataEncryptHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/../utils/src/main/java/com/zixin/utils/security/SensitiveDataEncryptHandler.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -21,21 +58,21 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="ROOT_SYNC" value="DONT_SYNC" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "ZixinYan"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;ZixinYan&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "git@github.com:ZixinYan/chronic-care-ai-platform-frontend.git",
-    "accountId": "5134aefa-b256-4345-ac5f-e14e9f3e6a44"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;git@github.com:ZixinYan/chronic-care-ai-platform-frontend.git&quot;,
+    &quot;accountId&quot;: &quot;5134aefa-b256-4345-ac5f-e14e9f3e6a44&quot;
   }
-}]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 5
-}]]></component>
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5
+}</component>
   <component name="ProjectId" id="3BbT6fALIVcKbLUxfrNewn6qyhH" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -55,11 +92,24 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_interpreter_path": "C:/Users/admin/AppData/Roaming/JetBrains/WebStorm2025.2/node/versions/24.14.1/node",
     "nodejs_package_manager_path": "npm",
+    "npm.dev.executor": "Run",
     "settings.editor.selected.configurable": "settings.vue",
     "ts.external.directory.path": "C:\\Program Files\\JetBrains\\WebStorm 2025.2.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RunManager">
+    <configuration name="dev" type="js.build_tools.npm" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="dev" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -74,7 +124,9 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1774756595449</updated>
-      <workItem from="1774756596791" duration="8198000" />
+      <workItem from="1774756596791" duration="8266000" />
+      <workItem from="1774969705669" duration="139000" />
+      <workItem from="1775372858188" duration="6283000" />
     </task>
     <task id="LOCAL-00001" summary="init">
       <option name="closed" value="true" />
@@ -84,7 +136,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774797513265</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="init">
+      <option name="closed" value="true" />
+      <created>1774798159903</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1774798159903</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

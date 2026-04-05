@@ -3,6 +3,7 @@ import JSONBig from 'json-bigint'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
 
 const JSONBigNative = JSONBig({ 
   useNativeBigInt: false,
@@ -73,6 +74,7 @@ instance.interceptors.response.use(
       switch (response.status) {
         case 401: {
           const authStore = useAuthStore()
+          const userStore = useUserStore()
           const refreshToken = authStore.getRefreshToken()
           if (refreshToken) {
             try {
@@ -82,14 +84,21 @@ instance.interceptors.response.use(
               if (res.data.code === 0) {
                 authStore.setTokens(res.data.data)
                 return instance(response.config)
+              } else {
+                authStore.clearAuth()
+                userStore.clearUser()
+                router.push('/login')
+                ElMessage.error('登录已过期，请重新登录')
               }
             } catch (refreshError) {
               authStore.clearAuth()
+              userStore.clearUser()
               router.push('/login')
               ElMessage.error('登录已过期，请重新登录')
             }
           } else {
             authStore.clearAuth()
+            userStore.clearUser()
             router.push('/login')
             ElMessage.error('请先登录')
           }

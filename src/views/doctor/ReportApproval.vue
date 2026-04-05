@@ -6,22 +6,11 @@
       </div>
 
       <el-form :inline="true" :model="queryParams" class="search-form">
-        <el-form-item label="患者姓名">
-          <el-input v-model="queryParams.patientName" placeholder="请输入患者姓名" clearable />
-        </el-form-item>
         <el-form-item label="报告类型">
-          <el-select v-model="queryParams.reportType" placeholder="请选择报告类型" clearable>
-            <el-option label="血糖报告" value="BLOOD_SUGAR" />
-            <el-option label="血压报告" value="BLOOD_PRESSURE" />
-            <el-option label="心电图报告" value="ECG" />
-            <el-option label="其他" value="OTHER" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-            <el-option label="待审批" value="PENDING" />
-            <el-option label="已通过" value="APPROVED" />
-            <el-option label="已拒绝" value="REJECTED" />
+          <el-select v-model="queryParams.reportType" placeholder="请选择报告类型" clearable style="width: 140px">
+            <el-option label="图片报告" :value="1" />
+            <el-option label="文字报告" :value="2" />
+            <el-option label="PDF报告" :value="3" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -38,33 +27,19 @@
           </template>
         </el-table-column>
         <el-table-column prop="title" label="报告标题" min-width="150" />
-        <el-table-column prop="uploadTime" label="上传时间" width="180" />
+        <el-table-column label="上传时间" width="180">
+          <template #default="{ row }">
+            {{ formatTime(row.createTime) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusTag(row.status)">{{ getStatusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="viewReport(row)">查看</el-button>
-            <el-button 
-              v-if="row.status === 'PENDING'" 
-              type="success" 
-              link 
-              size="small" 
-              @click="handleApprove(row)"
-            >
-              通过
-            </el-button>
-            <el-button 
-              v-if="row.status === 'PENDING'" 
-              type="danger" 
-              link 
-              size="small" 
-              @click="handleReject(row)"
-            >
-              拒绝
-            </el-button>
+            <el-button type="primary" link size="small" @click="viewReport(row)">查看详情</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -80,71 +55,21 @@
         @current-change="fetchReportList"
       />
     </div>
-
-    <el-dialog v-model="detailDialogVisible" title="报告详情" width="700px">
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="患者姓名">{{ currentReport.patientName }}</el-descriptions-item>
-        <el-descriptions-item label="报告类型">{{ getReportTypeText(currentReport.reportType) }}</el-descriptions-item>
-        <el-descriptions-item label="上传时间">{{ currentReport.uploadTime }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ getStatusText(currentReport.status) }}</el-descriptions-item>
-        <el-descriptions-item label="报告标题" :span="2">{{ currentReport.title }}</el-descriptions-item>
-        <el-descriptions-item label="报告内容" :span="2">
-          <div class="report-content">{{ currentReport.content }}</div>
-        </el-descriptions-item>
-      </el-descriptions>
-      
-      <div v-if="currentReport.fileUrl" class="report-file mt-20">
-        <el-image 
-          v-if="isImageFile(currentReport.fileUrl)"
-          :src="currentReport.fileUrl" 
-          :preview-src-list="[currentReport.fileUrl]"
-          fit="contain"
-          style="max-height: 400px;"
-        />
-        <el-link v-else :href="currentReport.fileUrl" target="_blank" type="primary">
-          点击查看文件
-        </el-link>
-      </div>
-
-      <template v-if="currentReport.status === 'PENDING'" #footer>
-        <el-button @click="detailDialogVisible = false">取消</el-button>
-        <el-button type="danger" @click="handleReject(currentReport)">拒绝</el-button>
-        <el-button type="success" @click="handleApprove(currentReport)">通过</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="rejectDialogVisible" title="拒绝原因" width="400px">
-      <el-input
-        v-model="rejectReason"
-        type="textarea"
-        :rows="4"
-        placeholder="请输入拒绝原因"
-      />
-      <template #footer>
-        <el-button @click="rejectDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="confirmReject">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import healthReportApi from '@/api/healthReport'
 
+const router = useRouter()
 const loading = ref(false)
-const submitLoading = ref(false)
-const detailDialogVisible = ref(false)
-const rejectDialogVisible = ref(false)
 const total = ref(0)
-const rejectReason = ref('')
-const currentReport = ref({})
 
 const queryParams = reactive({
-  patientName: '',
-  reportType: '',
-  status: 'PENDING',
+  reportType: null,
   pageNum: 1,
   pageSize: 10
 })
@@ -153,46 +78,51 @@ const reportList = ref([])
 
 const getReportTypeText = (type) => {
   const types = { 
-    BLOOD_SUGAR: '血糖报告', 
-    BLOOD_PRESSURE: '血压报告', 
-    ECG: '心电图报告', 
-    OTHER: '其他' 
+    1: '图片报告', 
+    2: '文字报告', 
+    3: 'PDF报告'
   }
   return types[type] || '未知'
 }
 
 const getReportTypeTag = (type) => {
   const tags = { 
-    BLOOD_SUGAR: 'primary', 
-    BLOOD_PRESSURE: 'success', 
-    ECG: 'warning', 
-    OTHER: 'info' 
+    1: 'primary', 
+    2: 'success', 
+    3: 'warning'
   }
   return tags[type] || 'info'
 }
 
 const getStatusText = (status) => {
-  const texts = { PENDING: '待审批', APPROVED: '已通过', REJECTED: '已拒绝' }
+  const texts = { 0: '待审批', 1: '已通过', 2: '已拒绝' }
   return texts[status] || '未知'
 }
 
 const getStatusTag = (status) => {
-  const tags = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
+  const tags = { 0: 'warning', 1: 'success', 2: 'danger' }
   return tags[status] || 'info'
 }
 
-const isImageFile = (url) => {
-  if (!url) return false
-  const ext = url.split('.').pop().toLowerCase()
-  return ['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(ext)
+const formatTime = (timestamp) => {
+  if (!timestamp) return '-'
+  const date = new Date(timestamp)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 }
 
 const fetchReportList = async () => {
   loading.value = true
   try {
-    const res = await healthReportApi.getReportList(queryParams)
+    const res = await healthReportApi.getPendingApprovalList(queryParams)
     if (res.code === 0) {
-      reportList.value = res.data?.list || []
+      reportList.value = res.data?.reportList || []
       total.value = res.data?.total || 0
     }
   } catch (error) {
@@ -208,71 +138,13 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
-  queryParams.patientName = ''
-  queryParams.reportType = ''
-  queryParams.status = 'PENDING'
+  queryParams.reportType = null
   queryParams.pageNum = 1
   fetchReportList()
 }
 
-const viewReport = async (row) => {
-  try {
-    const res = await healthReportApi.getReportDetail(row.id)
-    if (res.code === 0) {
-      currentReport.value = res.data || row
-      detailDialogVisible.value = true
-    }
-  } catch (error) {
-    console.error('获取报告详情失败:', error)
-  }
-}
-
-const handleApprove = async (row) => {
-  try {
-    const res = await healthReportApi.processReport({
-      reportId: row.id,
-      status: 'APPROVED'
-    })
-    if (res.code === 0) {
-      ElMessage.success('审批通过')
-      detailDialogVisible.value = false
-      fetchReportList()
-    }
-  } catch (error) {
-    console.error('审批失败:', error)
-  }
-}
-
-const handleReject = (row) => {
-  currentReport.value = row
-  rejectReason.value = ''
-  rejectDialogVisible.value = true
-}
-
-const confirmReject = async () => {
-  if (!rejectReason.value.trim()) {
-    ElMessage.warning('请输入拒绝原因')
-    return
-  }
-
-  submitLoading.value = true
-  try {
-    const res = await healthReportApi.processReport({
-      reportId: currentReport.value.id,
-      status: 'REJECTED',
-      rejectReason: rejectReason.value
-    })
-    if (res.code === 0) {
-      ElMessage.success('已拒绝')
-      rejectDialogVisible.value = false
-      detailDialogVisible.value = false
-      fetchReportList()
-    }
-  } catch (error) {
-    console.error('审批失败:', error)
-  } finally {
-    submitLoading.value = false
-  }
+const viewReport = (row) => {
+  router.push(`/doctor/report/${row.reportId}`)
 }
 
 onMounted(() => {
@@ -292,15 +164,5 @@ onMounted(() => {
 .pagination {
   margin-top: 20px;
   justify-content: flex-end;
-}
-
-.report-content {
-  max-height: 200px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-}
-
-.report-file {
-  text-align: center;
 }
 </style>

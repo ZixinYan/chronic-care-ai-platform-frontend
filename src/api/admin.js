@@ -19,6 +19,14 @@ export const adminApi = {
 
   getSystemStats() {
     return get('/auth/admin/stats')
+  },
+
+  getPendingLeaves(params) {
+    return get('/doctor/leave/admin/pending', params)
+  },
+
+  approveLeave(data) {
+    return post('/doctor/leave/admin/approve', data)
   }
 }
 

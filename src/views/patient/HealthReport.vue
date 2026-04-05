@@ -10,14 +10,14 @@
 
       <el-form :inline="true" :model="queryParams" class="search-form">
         <el-form-item label="报告类型">
-          <el-select v-model="queryParams.reportType" placeholder="全部" clearable>
+          <el-select v-model="queryParams.reportType" placeholder="全部" clearable style="width: 140px">
             <el-option label="图片报告" :value="1" />
             <el-option label="文字报告" :value="2" />
             <el-option label="PDF报告" :value="3" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryParams.status" placeholder="全部" clearable>
+          <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 140px">
             <el-option label="待审核" :value="0" />
             <el-option label="已审核" :value="1" />
             <el-option label="已驳回" :value="2" />

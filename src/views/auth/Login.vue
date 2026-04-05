@@ -286,7 +286,17 @@ const handleLoginSuccess = (data) => {
       router.push(redirect)
       return
     }
-    router.push('/workbench')
+    
+    const roles = data.role || []
+    if (roles.includes('PATIENT')) {
+      router.push('/patient/dashboard')
+    } else if (roles.includes('DOCTOR')) {
+      router.push('/doctor/schedule')
+    } else if (roles.includes('ADMIN')) {
+      router.push('/admin/workbench')
+    } else {
+      router.push('/workbench')
+    }
   }, 100)
 }
 

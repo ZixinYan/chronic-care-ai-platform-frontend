@@ -151,7 +151,7 @@ const getStatusTag = (status) => {
 }
 
 const viewReport = (row) => {
-  router.push(`/patient/health-report/detail/${row.id}`)
+  router.push(`/patient/health-report/detail/${row.reportId}`)
 }
 
 const handleTodoChange = (item) => {
@@ -166,7 +166,7 @@ const fetchReportList = async () => {
   try {
     const res = await healthReportApi.getReportList({ pageNum: 1, pageSize: 5 })
     if (res.code === 0) {
-      reportList.value = res.data?.list || []
+      reportList.value = res.data?.reportList || []
     }
   } catch (error) {
     console.error('获取报告列表失败:', error)

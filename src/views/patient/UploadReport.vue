@@ -19,6 +19,7 @@
         <el-form-item label="报告类型" prop="reportType">
           <el-radio-group v-model="uploadForm.reportType">
             <el-radio :label="1">图片报告</el-radio>
+            <el-radio :label="2">文字报告</el-radio>
             <el-radio :label="3">PDF报告</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -30,11 +31,25 @@
             <el-option label="心电图" value="ecg" />
             <el-option label="血常规" value="blood_routine" />
             <el-option label="尿常规" value="urine_routine" />
+            <el-option label="体检报告" value="physical_examination" />
+            <el-option label="影像检查" value="imaging" />
+            <el-option label="病理报告" value="pathology" />
             <el-option label="其他" value="other" />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="上传文件" prop="file">
+        <el-form-item v-if="uploadForm.reportType === 2" label="报告内容" prop="textContent">
+          <el-input
+            v-model="uploadForm.textContent"
+            type="textarea"
+            :rows="8"
+            placeholder="请输入报告内容"
+            maxlength="5000"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <el-form-item v-if="uploadForm.reportType !== 2" label="上传文件" prop="file">
           <el-upload
             ref="uploadRef"
             class="upload-area"
@@ -99,6 +114,7 @@ const uploadForm = reactive({
   title: '',
   reportType: 1,
   category: '',
+  textContent: '',
   remark: ''
 })
 
@@ -111,6 +127,9 @@ const uploadRules = {
   ],
   category: [
     { required: true, message: '请选择报告分类', trigger: 'change' }
+  ],
+  textContent: [
+    { required: true, message: '请输入报告内容', trigger: 'blur' }
   ]
 }
 
@@ -163,29 +182,46 @@ const handleSubmit = async () => {
   await formRef.value.validate(async (valid) => {
     if (!valid) return
 
-    if (!selectedFile.value) {
+    if (uploadForm.reportType !== 2 && !selectedFile.value) {
       ElMessage.error('请选择要上传的文件')
+      return
+    }
+
+    if (uploadForm.reportType === 2 && !uploadForm.textContent.trim()) {
+      ElMessage.error('请输入报告内容')
       return
     }
 
     loading.value = true
     try {
-      const res = await healthReportApi.uploadReport(
-        {
+      if (uploadForm.reportType === 2) {
+        const res = await healthReportApi.saveTextReport({
           title: uploadForm.title,
-          reportType: uploadForm.reportType,
           category: uploadForm.category,
-          remark: uploadForm.remark
-        },
-        selectedFile.value,
-        (progress) => {
-          console.log('上传进度:', progress)
+          textContent: uploadForm.textContent,
+          description: uploadForm.remark
+        })
+        if (res.code === 0) {
+          ElMessage.success('上传成功')
+          router.push('/patient/health-report')
         }
-      )
-
-      if (res.code === 0) {
-        ElMessage.success('上传成功')
-        router.push('/patient/health-report')
+      } else {
+        const res = await healthReportApi.uploadReport(
+          {
+            title: uploadForm.title,
+            reportType: uploadForm.reportType,
+            category: uploadForm.category,
+            description: uploadForm.remark
+          },
+          selectedFile.value,
+          (progress) => {
+            console.log('上传进度:', progress)
+          }
+        )
+        if (res.code === 0) {
+          ElMessage.success('上传成功')
+          router.push('/patient/health-report')
+        }
       }
     } catch (error) {
       console.error('上传失败:', error)

@@ -2,7 +2,13 @@ import { get, post } from '@/utils/request'
 
 export const doctorApi = {
   addSchedule(data) {
-    return post('/doctor/workbench/schedule/add', { schedule: data })
+    const { doctorId, doctorName, patientId, ...scheduleData } = data
+    return post('/doctor/workbench/schedule/add', { 
+      schedule: scheduleData,
+      doctorId,
+      doctorName,
+      patientId
+    })
   },
 
   getScheduleList(params) {
@@ -49,6 +55,14 @@ export const doctorApi = {
 
   updateLeave(data) {
     return post('/doctor/leave/update', data)
+  },
+
+  getDoctorList() {
+    return get('/doctor/info/list')
+  },
+
+  getPatientSchedules(params) {
+    return post('/doctor/workbench/patient/schedules', params)
   }
 }
 

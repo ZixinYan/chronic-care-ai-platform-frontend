@@ -83,12 +83,118 @@
         </el-form-item>
 
         <el-form-item prop="role" label="用户角色">
-          <el-radio-group v-model="registerForm.role">
+          <el-radio-group v-model="registerForm.role" @change="handleRoleChange">
             <el-radio label="PATIENT">患者</el-radio>
             <el-radio label="DOCTOR">医生</el-radio>
-            <el-radio label="FAMILY">家属</el-radio>
           </el-radio-group>
         </el-form-item>
+
+        <template v-if="registerForm.role === 'DOCTOR'">
+          <div class="role-section-title">医生信息</div>
+          
+          <el-form-item prop="doctor.department" label="科室">
+            <el-select v-model="registerForm.doctor.department" placeholder="请选择科室" style="width: 100%">
+              <el-option label="内科" value="内科" />
+              <el-option label="内分泌科" value="内分泌科" />
+              <el-option label="心血管科" value="心血管科" />
+              <el-option label="神经内科" value="神经内科" />
+              <el-option label="全科" value="全科" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item prop="doctor.title" label="职称">
+            <el-select v-model="registerForm.doctor.title" placeholder="请选择职称" style="width: 100%">
+              <el-option label="住院医师" value="住院医师" />
+              <el-option label="主治医师" value="主治医师" />
+              <el-option label="副主任医师" value="副主任医师" />
+              <el-option label="主任医师" value="主任医师" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item prop="doctor.experience" label="工作经验（年）">
+            <el-input-number v-model="registerForm.doctor.experience" :min="0" :max="50" style="width: 100%" />
+          </el-form-item>
+
+          <el-form-item prop="doctor.education" label="学历">
+            <el-select v-model="registerForm.doctor.education" placeholder="请选择学历" style="width: 100%">
+              <el-option label="大专" value="大专" />
+              <el-option label="本科" value="本科" />
+              <el-option label="硕士" value="硕士" />
+              <el-option label="博士" value="博士" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item prop="doctor.bio" label="个人简介">
+            <el-input
+              v-model="registerForm.doctor.bio"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入个人简介"
+            />
+          </el-form-item>
+        </template>
+
+        <template v-if="registerForm.role === 'PATIENT'">
+          <div class="role-section-title">患者信息</div>
+          
+          <el-row :gutter="20">
+            <el-col :span="8">
+              <el-form-item prop="patient.bloodType" label="血型">
+                <el-select v-model="registerForm.patient.bloodType" placeholder="请选择" style="width: 100%">
+                  <el-option label="A型" value="A" />
+                  <el-option label="B型" value="B" />
+                  <el-option label="AB型" value="AB" />
+                  <el-option label="O型" value="O" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item prop="patient.height" label="身高(cm)">
+                <el-input-number v-model="registerForm.patient.height" :min="50" :max="250" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item prop="patient.weight" label="体重(kg)">
+                <el-input-number v-model="registerForm.patient.weight" :min="20" :max="300" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-form-item prop="patient.medicalHistory" label="病史摘要">
+            <el-input
+              v-model="registerForm.patient.medicalHistory"
+              type="textarea"
+              :rows="2"
+              placeholder="请输入病史摘要（可选）"
+            />
+          </el-form-item>
+
+          <el-form-item prop="patient.allergies" label="过敏史">
+            <el-input
+              v-model="registerForm.patient.allergies"
+              placeholder="请输入过敏史（可选）"
+            />
+          </el-form-item>
+
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item prop="patient.emergencyContact" label="紧急联系人">
+                <el-input
+                  v-model="registerForm.patient.emergencyContact"
+                  placeholder="请输入紧急联系人姓名"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item prop="patient.emergencyPhone" label="紧急联系人电话">
+                <el-input
+                  v-model="registerForm.patient.emergencyPhone"
+                  placeholder="请输入紧急联系人电话"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </template>
 
         <el-form-item prop="agreement">
           <el-checkbox v-model="registerForm.agreement">
@@ -141,7 +247,23 @@ const registerForm = reactive({
   realName: '',
   idCard: '',
   role: 'PATIENT',
-  agreement: false
+  agreement: false,
+  doctor: {
+    department: '',
+    title: '',
+    experience: 0,
+    education: '',
+    bio: ''
+  },
+  patient: {
+    bloodType: '',
+    height: null,
+    weight: null,
+    medicalHistory: '',
+    allergies: '',
+    emergencyContact: '',
+    emergencyPhone: ''
+  }
 })
 
 const validateUsername = (rule, value, callback) => {
@@ -236,6 +358,25 @@ const registerRules = {
 
 let timer = null
 
+const handleRoleChange = () => {
+  registerForm.doctor = {
+    department: '',
+    title: '',
+    experience: 0,
+    education: '',
+    bio: ''
+  }
+  registerForm.patient = {
+    bloodType: '',
+    height: null,
+    weight: null,
+    medicalHistory: '',
+    allergies: '',
+    emergencyContact: '',
+    emergencyPhone: ''
+  }
+}
+
 const handleSendCode = async () => {
   if (!registerForm.phone || !isValidPhone(registerForm.phone)) {
     ElMessage.warning('请输入正确的手机号')
@@ -267,15 +408,54 @@ const handleRegister = async () => {
 
     loading.value = true
     try {
-      const res = await authApi.register({
+      const roleCodeMap = {
+        'DOCTOR': 1,
+        'PATIENT': 2
+      }
+      
+      const requestData = {
         username: registerForm.username,
         password: registerForm.password,
         phone: registerForm.phone,
         code: registerForm.code,
-        realName: registerForm.realName,
+        nickname: registerForm.realName,
         idCard: registerForm.idCard,
-        role: registerForm.role
-      })
+        roleCodes: [roleCodeMap[registerForm.role]]
+      }
+
+      if (registerForm.role === 'DOCTOR') {
+        if (!registerForm.doctor.department) {
+          ElMessage.warning('请选择科室')
+          loading.value = false
+          return
+        }
+        if (!registerForm.doctor.title) {
+          ElMessage.warning('请选择职称')
+          loading.value = false
+          return
+        }
+        requestData.doctor = {
+          department: registerForm.doctor.department,
+          title: registerForm.doctor.title,
+          experience: registerForm.doctor.experience || 0,
+          education: registerForm.doctor.education || '',
+          bio: registerForm.doctor.bio || ''
+        }
+      }
+
+      if (registerForm.role === 'PATIENT') {
+        requestData.patient = {
+          bloodType: registerForm.patient.bloodType || '',
+          height: registerForm.patient.height || null,
+          weight: registerForm.patient.weight || null,
+          medicalHistory: registerForm.patient.medicalHistory || '',
+          allergies: registerForm.patient.allergies || '',
+          emergencyContact: registerForm.patient.emergencyContact || '',
+          emergencyPhone: registerForm.patient.emergencyPhone || ''
+        }
+      }
+
+      const res = await authApi.register(requestData)
       if (res.code === 0) {
         ElMessage.success('注册成功，请登录')
         router.push('/login')
@@ -309,11 +489,13 @@ const showPrivacy = () => {
 }
 
 .register-box {
-  width: 480px;
+  width: 520px;
   padding: 40px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .register-header {
@@ -350,6 +532,15 @@ const showPrivacy = () => {
   .el-input {
     flex: 1;
   }
+}
+
+.role-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #409eff;
+  margin: 20px 0 15px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
 }
 
 .register-btn {

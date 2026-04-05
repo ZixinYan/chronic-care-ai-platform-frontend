@@ -17,7 +17,7 @@
           />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryParams.status" placeholder="全部" clearable>
+          <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 120px">
             <el-option label="待处理" value="PENDING" />
             <el-option label="进行中" value="IN_PROGRESS" />
             <el-option label="已完成" value="COMPLETED" />
@@ -32,14 +32,18 @@
 
       <el-table :data="scheduleList" stripe v-loading="loading" style="width: 100%">
         <el-table-column prop="scheduleDay" label="日期" width="120" />
-        <el-table-column prop="scheduleTime" label="时间" width="100" />
-        <el-table-column prop="patientName" label="患者姓名" width="100" />
-        <el-table-column prop="type" label="类型" width="100">
+        <el-table-column label="时间" width="120">
           <template #default="{ row }">
-            <el-tag :type="getScheduleTypeTag(row.type)">{{ row.typeText }}</el-tag>
+            {{ row.startTimeStr }} - {{ row.endTimeStr }}
           </template>
         </el-table-column>
-        <el-table-column prop="content" label="内容" min-width="150" />
+        <el-table-column prop="patientName" label="患者姓名" width="100" />
+        <el-table-column label="类型" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getScheduleTypeTag(row.scheduleCategory)">{{ row.scheduleCategoryName || row.scheduleCategory }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="schedule" label="内容" min-width="150" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusTag(row.status)">{{ getStatusText(row.status) }}</el-tag>
@@ -147,6 +151,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import doctorApi from '@/api/doctor'
 
+const getTodayDate = () => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const router = useRouter()
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -155,7 +167,7 @@ const scheduleFormRef = ref(null)
 const total = ref(0)
 
 const queryParams = reactive({
-  scheduleDay: '',
+  scheduleDay: getTodayDate(),
   status: '',
   pageNum: 1,
   pageSize: 10
@@ -179,9 +191,19 @@ const scheduleRules = {
   content: [{ required: true, message: '请输入内容', trigger: 'blur' }]
 }
 
-const getScheduleTypeTag = (type) => {
-  const tags = { FOLLOW_UP: 'primary', CONSULTATION: 'success', EXAMINATION: 'warning', OTHER: 'info' }
-  return tags[type] || 'info'
+const getScheduleTypeTag = (category) => {
+  const tags = { 
+    '门诊': 'primary', 
+    '手术': 'danger', 
+    '查房': 'success', 
+    '会诊': 'warning', 
+    '急诊': 'danger',
+    '教学': 'info',
+    '科研': 'info',
+    '行政': 'info',
+    '线上审批': 'primary'
+  }
+  return tags[category] || 'info'
 }
 
 const getStatusTag = (status) => {
@@ -226,7 +248,7 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
-  queryParams.scheduleDay = ''
+  queryParams.scheduleDay = getTodayDate()
   queryParams.status = ''
   queryParams.pageNum = 1
   fetchScheduleList()

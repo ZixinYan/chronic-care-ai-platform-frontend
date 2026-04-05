@@ -17,8 +17,16 @@ export const healthReportApi = {
     })
   },
 
+  saveTextReport(data) {
+    return post('/health/report/save-text', data)
+  },
+
   getReportList(params) {
     return get('/health/report/list', params)
+  },
+
+  getPendingApprovalList(params) {
+    return get('/health/report/pending-approval', params)
   },
 
   getReportDetail(reportId) {
@@ -26,7 +34,15 @@ export const healthReportApi = {
   },
 
   processReport(data) {
-    return post('/health/report/process', data)
+    return post('/doctor/report/process', data)
+  },
+
+  getRecommendedDoctors(reportId) {
+    return get('/health/report/recommended-doctors', { reportId })
+  },
+
+  sendReportToDoctor(reportId, doctorId) {
+    return post('/health/report/send-to-doctor', { reportId, doctorId })
   }
 }
 
