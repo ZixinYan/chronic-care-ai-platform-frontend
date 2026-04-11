@@ -66,53 +66,113 @@
         <div v-else class="recommended-doctors">
           <h4>
             <el-icon><User /></el-icon>
-            AI推荐医生
-            <el-button 
-              type="primary" 
-              link 
-              :loading="loadingDoctors"
-              @click="fetchRecommendedDoctors"
-            >
-              刷新推荐
-            </el-button>
+            选择审核医生
           </h4>
-          <el-alert
-            v-if="aiRecommendation"
-            :title="aiRecommendation"
-            type="info"
-            :closable="false"
-            class="mb-16"
-          />
-          <div v-if="loadingDoctors" class="loading-container">
-            <el-icon class="is-loading"><Loading /></el-icon>
-            <span>正在获取AI推荐医生...</span>
-          </div>
-          <div v-else-if="doctors.length > 0" class="doctor-list">
-            <div 
-              v-for="doctor in doctors" 
-              :key="doctor.doctorId" 
-              class="doctor-card"
-              :class="{ 'selected': selectedDoctorId === doctor.doctorId }"
-              @click="selectDoctor(doctor.doctorId)"
-            >
-              <el-avatar :size="60" :src="doctor.avatar || defaultAvatar">
-                {{ doctor.doctorName?.charAt(0) }}
-              </el-avatar>
-              <div class="doctor-info">
-                <div class="doctor-name">{{ doctor.doctorName }}</div>
-                <div class="doctor-dept">{{ doctor.department }} · {{ doctor.title }}</div>
-                <div class="doctor-recommendation">{{ doctor.recommendation }}</div>
-              </div>
-              <el-radio 
-                v-model="selectedDoctorId" 
-                :value="doctor.doctorId"
-                @click.stop
-              />
-            </div>
-          </div>
-          <el-empty v-else-if="!loadingDoctors" description="暂无推荐医生" />
           
-          <div v-if="doctors.length > 0" class="send-action mt-16">
+          <el-radio-group v-model="doctorSelectionMode" class="selection-mode-group mb-16">
+            <el-radio-button label="ai">AI推荐医生</el-radio-button>
+            <el-radio-button label="manual">手动选择医生</el-radio-button>
+          </el-radio-group>
+
+          <div v-if="doctorSelectionMode === 'ai'">
+            <div class="ai-header">
+              <el-button 
+                type="primary" 
+                link 
+                :loading="loadingDoctors"
+                @click="fetchRecommendedDoctors"
+              >
+                刷新推荐
+              </el-button>
+            </div>
+            <el-alert
+              v-if="aiRecommendation"
+              :title="aiRecommendation"
+              type="info"
+              :closable="false"
+              class="mb-16"
+            />
+            <div v-if="loadingDoctors" class="loading-container">
+              <el-icon class="is-loading"><Loading /></el-icon>
+              <span>正在获取AI推荐医生...</span>
+            </div>
+            <div v-else-if="doctors.length > 0" class="doctor-list">
+              <div 
+                v-for="doctor in doctors" 
+                :key="doctor.doctorId" 
+                class="doctor-card"
+                :class="{ 'selected': selectedDoctorId === doctor.doctorId }"
+                @click="selectDoctor(doctor.doctorId)"
+              >
+                <el-avatar :size="60" :src="doctor.avatar || defaultAvatar">
+                  {{ doctor.doctorName?.charAt(0) }}
+                </el-avatar>
+                <div class="doctor-info">
+                  <div class="doctor-name">{{ doctor.doctorName }}</div>
+                  <div class="doctor-dept">{{ doctor.department }} · {{ doctor.title }}</div>
+                  <div class="doctor-recommendation">{{ doctor.recommendation }}</div>
+                </div>
+                <el-radio 
+                  v-model="selectedDoctorId" 
+                  :value="doctor.doctorId"
+                  @click.stop
+                />
+              </div>
+            </div>
+            <el-empty v-else-if="!loadingDoctors" description="暂无推荐医生" />
+          </div>
+
+          <div v-else class="manual-selection">
+            <el-form :inline="true" :model="searchParams" class="search-form">
+              <el-form-item label="医生姓名">
+                <el-input v-model="searchParams.name" placeholder="请输入医生姓名" clearable />
+              </el-form-item>
+              <el-form-item label="科室">
+                <el-select v-model="searchParams.department" placeholder="请选择科室" clearable style="width: 140px">
+                  <el-option label="内科" value="内科" />
+                  <el-option label="内分泌科" value="内分泌科" />
+                  <el-option label="心血管科" value="心血管科" />
+                  <el-option label="神经内科" value="神经内科" />
+                  <el-option label="全科" value="全科" />
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="handleSearchDoctors">搜索</el-button>
+                <el-button @click="handleResetSearch">重置</el-button>
+              </el-form-item>
+            </el-form>
+
+            <div v-if="loadingAllDoctors" class="loading-container">
+              <el-icon class="is-loading"><Loading /></el-icon>
+              <span>正在加载医生列表...</span>
+            </div>
+            <div v-else-if="filteredAllDoctors.length > 0" class="doctor-list">
+              <div 
+                v-for="doctor in filteredAllDoctors" 
+                :key="doctor.userId" 
+                class="doctor-card"
+                :class="{ 'selected': selectedDoctorId === doctor.userId }"
+                @click="selectDoctor(doctor.userId)"
+              >
+                <el-avatar :size="60" :src="doctor.avatarUrl || defaultAvatar">
+                  {{ doctor.username?.charAt(0) }}
+                </el-avatar>
+                <div class="doctor-info">
+                  <div class="doctor-name">{{ doctor.username }}</div>
+                  <div class="doctor-dept">{{ doctor.department }} · {{ doctor.title }}</div>
+                  <div class="doctor-specialty">擅长：{{ doctor.bio || '暂无介绍' }}</div>
+                </div>
+                <el-radio 
+                  v-model="selectedDoctorId" 
+                  :value="doctor.userId"
+                  @click.stop
+                />
+              </div>
+            </div>
+            <el-empty v-else description="暂无医生信息" />
+          </div>
+          
+          <div v-if="(doctorSelectionMode === 'ai' && doctors.length > 0) || (doctorSelectionMode === 'manual' && filteredAllDoctors.length > 0)" class="send-action mt-16">
             <el-button 
               type="primary" 
               :disabled="!selectedDoctorId"
@@ -154,33 +214,87 @@
         :closable="false"
         class="mb-16"
       />
-      <div v-if="loadingDoctors" class="loading-container">
-        <el-icon class="is-loading"><Loading /></el-icon>
-        <span>正在获取AI推荐医生...</span>
-      </div>
-      <div v-else-if="doctors.length > 0" class="doctor-list">
-        <div 
-          v-for="doctor in doctors" 
-          :key="doctor.doctorId" 
-          class="doctor-card"
-          :class="{ 'selected': selectedDoctorId === doctor.doctorId }"
-          @click="selectDoctor(doctor.doctorId)"
-        >
-          <el-avatar :size="50" :src="doctor.avatar || defaultAvatar">
-            {{ doctor.doctorName?.charAt(0) }}
-          </el-avatar>
-          <div class="doctor-info">
-            <div class="doctor-name">{{ doctor.doctorName }}</div>
-            <div class="doctor-dept">{{ doctor.department }} · {{ doctor.title }}</div>
-          </div>
-          <el-radio 
-            v-model="selectedDoctorId" 
-            :value="doctor.doctorId"
-            @click.stop
-          />
+      
+      <el-radio-group v-model="switchDoctorSelectionMode" class="selection-mode-group mb-16">
+        <el-radio-button label="ai">AI推荐医生</el-radio-button>
+        <el-radio-button label="manual">手动选择医生</el-radio-button>
+      </el-radio-group>
+
+      <div v-if="switchDoctorSelectionMode === 'ai'">
+        <div v-if="loadingDoctors" class="loading-container">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span>正在获取AI推荐医生...</span>
         </div>
+        <div v-else-if="doctors.length > 0" class="doctor-list">
+          <div 
+            v-for="doctor in doctors" 
+            :key="doctor.doctorId" 
+            class="doctor-card"
+            :class="{ 'selected': selectedDoctorId === doctor.doctorId }"
+            @click="selectDoctor(doctor.doctorId)"
+          >
+            <el-avatar :size="50" :src="doctor.avatar || defaultAvatar">
+              {{ doctor.doctorName?.charAt(0) }}
+            </el-avatar>
+            <div class="doctor-info">
+              <div class="doctor-name">{{ doctor.doctorName }}</div>
+              <div class="doctor-dept">{{ doctor.department }} · {{ doctor.title }}</div>
+            </div>
+            <el-radio 
+              v-model="selectedDoctorId" 
+              :value="doctor.doctorId"
+              @click.stop
+            />
+          </div>
+        </div>
+        <el-empty v-else description="暂无推荐医生" />
       </div>
-      <el-empty v-else description="暂无推荐医生" />
+
+      <div v-else class="manual-selection">
+        <el-form :inline="true" :model="switchSearchParams" class="search-form">
+          <el-form-item label="医生姓名">
+            <el-input v-model="switchSearchParams.name" placeholder="请输入医生姓名" clearable />
+          </el-form-item>
+          <el-form-item label="科室">
+            <el-select v-model="switchSearchParams.department" placeholder="请选择科室" clearable style="width: 140px">
+              <el-option label="内科" value="内科" />
+              <el-option label="内分泌科" value="内分泌科" />
+              <el-option label="心血管科" value="心血管科" />
+              <el-option label="神经内科" value="神经内科" />
+              <el-option label="全科" value="全科" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+
+        <div v-if="loadingAllDoctors" class="loading-container">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span>正在加载医生列表...</span>
+        </div>
+        <div v-else-if="switchFilteredDoctors.length > 0" class="doctor-list" style="max-height: 400px; overflow-y: auto;">
+          <div 
+            v-for="doctor in switchFilteredDoctors" 
+            :key="doctor.userId" 
+            class="doctor-card"
+            :class="{ 'selected': selectedDoctorId === doctor.userId }"
+            @click="selectDoctor(doctor.userId)"
+          >
+            <el-avatar :size="50" :src="doctor.avatarUrl || defaultAvatar">
+              {{ doctor.username?.charAt(0) }}
+            </el-avatar>
+            <div class="doctor-info">
+              <div class="doctor-name">{{ doctor.username }}</div>
+              <div class="doctor-dept">{{ doctor.department }} · {{ doctor.title }}</div>
+            </div>
+            <el-radio 
+              v-model="selectedDoctorId" 
+              :value="doctor.userId"
+              @click.stop
+            />
+          </div>
+        </div>
+        <el-empty v-else description="暂无医生信息" />
+      </div>
+      
       <template #footer>
         <el-button @click="switchDoctorDialogVisible = false">取消</el-button>
         <el-button 
@@ -197,11 +311,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, User, Loading } from '@element-plus/icons-vue'
 import healthReportApi from '@/api/healthReport'
+import doctorApi from '@/api/doctor'
 
 const route = useRoute()
 
@@ -231,6 +346,18 @@ const loadingDoctors = ref(false)
 const sending = ref(false)
 const aiRecommendation = ref('')
 const switchDoctorDialogVisible = ref(false)
+const doctorSelectionMode = ref('ai')
+const allDoctors = ref([])
+const loadingAllDoctors = ref(false)
+const searchParams = ref({
+  name: '',
+  department: ''
+})
+const switchDoctorSelectionMode = ref('ai')
+const switchSearchParams = ref({
+  name: '',
+  department: ''
+})
 
 const getReportTypeText = (type) => {
   const types = { 1: '图片', 2: '文字', 3: 'PDF' }
@@ -260,6 +387,65 @@ const downloadFile = () => {
 
 const selectDoctor = (doctorId) => {
   selectedDoctorId.value = doctorId
+}
+
+const filteredAllDoctors = computed(() => {
+  let result = allDoctors.value
+  
+  if (searchParams.value.name) {
+    result = result.filter(doctor => 
+      doctor.username && doctor.username.includes(searchParams.value.name)
+    )
+  }
+  
+  if (searchParams.value.department) {
+    result = result.filter(doctor => 
+      doctor.department && doctor.department === searchParams.value.department
+    )
+  }
+  
+  return result
+})
+
+const switchFilteredDoctors = computed(() => {
+  let result = allDoctors.value
+  
+  if (switchSearchParams.value.name) {
+    result = result.filter(doctor => 
+      doctor.username && doctor.username.includes(switchSearchParams.value.name)
+    )
+  }
+  
+  if (switchSearchParams.value.department) {
+    result = result.filter(doctor => 
+      doctor.department && doctor.department === switchSearchParams.value.department
+    )
+  }
+  
+  return result
+})
+
+const fetchAllDoctors = async () => {
+  loadingAllDoctors.value = true
+  try {
+    const res = await doctorApi.getDoctorList()
+    if (res.code === 0) {
+      allDoctors.value = res.data || []
+    }
+  } catch (error) {
+    console.error('获取医生列表失败:', error)
+    ElMessage.error('获取医生列表失败')
+  } finally {
+    loadingAllDoctors.value = false
+  }
+}
+
+const handleSearchDoctors = () => {
+}
+
+const handleResetSearch = () => {
+  searchParams.value.name = ''
+  searchParams.value.department = ''
 }
 
 const fetchReportDetail = async () => {
@@ -327,6 +513,10 @@ const fetchRecommendedDoctors = async () => {
 
 const showSwitchDoctorDialog = () => {
   switchDoctorDialogVisible.value = true
+  switchDoctorSelectionMode.value = 'ai'
+  switchSearchParams.value.name = ''
+  switchSearchParams.value.department = ''
+  selectedDoctorId.value = null
   fetchRecommendedDoctors()
 }
 
@@ -429,6 +619,7 @@ const formatTime = (timestamp) => {
 
 onMounted(() => {
   fetchReportDetail()
+  fetchAllDoctors()
 })
 </script>
 
@@ -503,6 +694,25 @@ onMounted(() => {
     align-items: center;
     gap: 8px;
   }
+}
+
+.selection-mode-group {
+  margin-bottom: 16px;
+}
+
+.ai-header {
+  margin-bottom: 12px;
+}
+
+.manual-selection {
+  .search-form {
+    margin-bottom: 16px;
+  }
+}
+
+.doctor-specialty {
+  font-size: 12px;
+  color: #909399;
 }
 
 .current-doctor {

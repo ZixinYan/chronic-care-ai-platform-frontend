@@ -254,6 +254,19 @@ router.beforeEach((to, from, next) => {
     }
   }
 
+  if (to.name === 'Workbench' || to.name === 'Dashboard') {
+    if (userStore.hasRole('PATIENT')) {
+      next({ name: 'PatientDashboard' })
+      return
+    } else if (userStore.hasRole('DOCTOR')) {
+      next({ name: 'DoctorSchedule' })
+      return
+    } else if (userStore.hasRole('ADMIN')) {
+      next({ name: 'AdminWorkbench' })
+      return
+    }
+  }
+
   next()
 })
 

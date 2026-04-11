@@ -5,49 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9336f976-70a0-4e88-9f96-aa387f1874a6" name="Changes" comment="init">
-      <change afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/config/WebMvcConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/resources/bootstrap.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/resources/bootstrap.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../.idea/MarsCodeWorkspaceAppSettings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/MarsCodeWorkspaceAppSettings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/BloodGlucoseConsumerApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/BloodGlucoseConsumerApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/controller/GlucosePredictionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/java/com/zixin/bloodglucoseconsumer/controller/GlucosePredictionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-consumer/src/main/resources/application.properties" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/BloodGlucoseProviderApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/BloodGlucoseProviderApplication.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/resources/application.properties" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/admin.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/admin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/ai.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/doctor.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/doctor.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/healthReport.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/healthReport.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/common/Sidebar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/common/Sidebar.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/router/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/request.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/admin/RoleManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/admin/RoleManagement.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/admin/UserManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/admin/UserManagement.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/ai/Schedule.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/auth/Login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/auth/Login.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/auth/Register.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/auth/Register.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/doctor/LeaveRequest.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/doctor/LeaveRequest.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/doctor/ReportApproval.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/doctor/ReportApproval.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/doctor/Schedule.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/doctor/Schedule.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/doctor/ScheduleDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/doctor/ScheduleDetail.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/doctor/Workbench.vue" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/patient/AppointmentDoctor.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/AppointmentDoctor.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/patient/Dashboard.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/Dashboard.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/patient/HealthReport.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/HealthReport.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/views/patient/ReportDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/ReportDetail.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/patient/UploadReport.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/UploadReport.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-api/src/main/java/com/zixin/healthcenterapi/dto/SaveTextReportRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-api/src/main/java/com/zixin/healthcenterapi/dto/SaveTextReportRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-api/src/main/java/com/zixin/healthcenterapi/vo/HealthReportVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-api/src/main/java/com/zixin/healthcenterapi/vo/HealthReportVO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-consumer/src/main/java/com/zixin/healthcenterconsumer/controller/GlucoseReportController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-consumer/src/main/java/com/zixin/healthcenterconsumer/controller/HealthReportController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-consumer/src/main/java/com/zixin/healthcenterconsumer/controller/HealthReportController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-provider/src/main/java/com/zixin/healthcenterprovider/service/HealthReportServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-provider/src/main/java/com/zixin/healthcenterprovider/service/HealthReportServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../health-report-center/health-center-provider/src/main/resources/bootstrap.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../health-report-center/health-center-provider/src/main/resources/bootstrap.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../utils/src/main/java/com/zixin/utils/security/SensitiveDataEncryptHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/../utils/src/main/java/com/zixin/utils/security/SensitiveDataEncryptHandler.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,26 +41,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "D:/personal_work/chronic-care-ai-platform/chronic-care-frontend",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_interpreter_path": "C:/Users/admin/AppData/Roaming/JetBrains/WebStorm2025.2/node/versions/24.14.1/node",
-    "nodejs_package_manager_path": "npm",
-    "npm.dev.executor": "Run",
-    "settings.editor.selected.configurable": "settings.vue",
-    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\WebStorm 2025.2.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/personal_work/chronic-care-ai-platform/chronic-care-frontend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_interpreter_path&quot;: &quot;C:/Users/admin/AppData/Roaming/JetBrains/WebStorm2025.2/node/versions/24.14.1/node&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;npm.dev.executor&quot;: &quot;Run&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;settings.vue&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\WebStorm 2025.2.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="dev" type="js.build_tools.npm" nameIsGenerated="true">
       <package-json value="$PROJECT_DIR$/package.json" />
@@ -126,7 +89,8 @@
       <updated>1774756595449</updated>
       <workItem from="1774756596791" duration="8266000" />
       <workItem from="1774969705669" duration="139000" />
-      <workItem from="1775372858188" duration="6283000" />
+      <workItem from="1775372858188" duration="7079000" />
+      <workItem from="1775446926659" duration="1115000" />
     </task>
     <task id="LOCAL-00001" summary="init">
       <option name="closed" value="true" />

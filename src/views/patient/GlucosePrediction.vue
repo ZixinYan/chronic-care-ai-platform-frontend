@@ -101,7 +101,7 @@
                 :step="0.1"
                 style="width: 100%;"
               />
-              <span class="field-unit">mg/dL</span>
+              <span class="field-unit">mmol/L</span>
             </el-form-item>
             <el-form-item label="指尖血血糖" prop="finger">
               <el-input-number 
@@ -112,7 +112,7 @@
                 :step="0.1"
                 style="width: 100%;"
               />
-              <span class="field-unit">mg/dL</span>
+              <span class="field-unit">mmol/L</span>
             </el-form-item>
             
             <el-divider content-position="left">胰岛素与碳水</el-divider>
@@ -290,6 +290,16 @@ const getGlucoseClass = (value) => {
   return 'glucose-danger'
 }
 
+const MMOL_TO_MGDL_FACTOR = 18
+
+const mmolToMgdl = (mmol) => {
+  return mmol * MMOL_TO_MGDL_FACTOR
+}
+
+const mgdlToMmol = (mgdl) => {
+  return mgdl / MMOL_TO_MGDL_FACTOR
+}
+
 const generateTimeLabels = (historyCount, predictCount) => {
   const labels = []
   const now = new Date()
@@ -424,8 +434,8 @@ const handlePredict = async () => {
   
   try {
     const res = await glucoseApi.predictGlucose({
-      cbg: [predictionForm.cbg],
-      finger: [predictionForm.finger],
+      cbg: [mmolToMgdl(predictionForm.cbg)],
+      finger: [mmolToMgdl(predictionForm.finger)],
       basal: [predictionForm.basal],
       hr: [predictionForm.hr],
       gsr: [predictionForm.gsr],
@@ -436,7 +446,8 @@ const handlePredict = async () => {
     })
     
     if (res.code === 0 && res.data) {
-      predictedData.value = res.data.predictedValues || []
+      const predictedValuesMgdl = res.data.predictedValues || []
+      predictedData.value = predictedValuesMgdl.map(mgdl => mgdlToMmol(mgdl))
       predictedTimes.value = res.data.predictedTimes || []
       confidence.value = res.data.confidence || 0.85
       
