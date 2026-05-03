@@ -5,12 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9336f976-70a0-4e88-9f96-aa387f1874a6" name="Changes" comment="init">
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/router/index.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../glucose-predict-model/.idea/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/glucose.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/glucose.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/patient/ReportDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/ReportDetail.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -91,6 +88,7 @@
       <workItem from="1774969705669" duration="139000" />
       <workItem from="1775372858188" duration="7079000" />
       <workItem from="1775446926659" duration="1115000" />
+      <workItem from="1775918989963" duration="32000" />
     </task>
     <task id="LOCAL-00001" summary="init">
       <option name="closed" value="true" />

@@ -27,25 +27,19 @@
 
           <div v-if="predictedData.length > 0" class="prediction-stats mt-20">
             <el-row :gutter="20">
-              <el-col :span="6">
-                <div class="stat-item">
-                  <div class="stat-label">预测置信度</div>
-                  <div class="stat-value">{{ (confidence * 100).toFixed(0) }}%</div>
-                </div>
-              </el-col>
-              <el-col :span="6">
+              <el-col :span="8">
                 <div class="stat-item">
                   <div class="stat-label">预测最高值</div>
                   <div class="stat-value">{{ maxPredicted.toFixed(1) }} mmol/L</div>
                 </div>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="8">
                 <div class="stat-item">
                   <div class="stat-label">预测最低值</div>
                   <div class="stat-value">{{ minPredicted.toFixed(1) }} mmol/L</div>
                 </div>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="8">
                 <div class="stat-item">
                   <div class="stat-label">预测平均值</div>
                   <div class="stat-value">{{ avgPredicted.toFixed(1) }} mmol/L</div>
@@ -53,35 +47,6 @@
               </el-col>
             </el-row>
           </div>
-        </div>
-
-        <div class="card mt-20">
-          <div class="card-header">
-            <span class="card-title">历史血糖数据</span>
-            <el-button type="primary" link size="small" @click="loadMoreHistory">
-              加载更多
-            </el-button>
-          </div>
-          <el-table :data="glucoseHistory" stripe style="width: 100%">
-            <el-table-column prop="measureTime" label="测量时间" width="180" />
-            <el-table-column prop="glucoseValue" label="血糖值(mmol/L)" width="120">
-              <template #default="{ row }">
-                <span :class="getGlucoseClass(row.glucoseValue)">{{ row.glucoseValue }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="measureType" label="测量类型" width="100">
-              <template #default="{ row }">
-                {{ getMeasureTypeText(row.measureType) }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态">
-              <template #default="{ row }">
-                <el-tag :type="getGlucoseTag(row.glucoseValue)" size="small">
-                  {{ getGlucoseStatus(row.glucoseValue) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
         </div>
       </el-col>
 
@@ -238,16 +203,8 @@ const predictionRules = {
 
 const predictionResult = ref(null)
 const predictedData = ref([])
-const predictedTimes = ref([])
-const confidence = ref(0)
-
-const glucoseHistory = ref([
-  { measureTime: '2024-01-15 08:00', glucoseValue: 5.8, measureType: 'FASTING' },
-  { measureTime: '2024-01-14 08:00', glucoseValue: 6.2, measureType: 'FASTING' },
-  { measureTime: '2024-01-13 08:00', glucoseValue: 5.5, measureType: 'FASTING' },
-  { measureTime: '2024-01-12 08:00', glucoseValue: 6.0, measureType: 'FASTING' },
-  { measureTime: '2024-01-11 08:00', glucoseValue: 5.9, measureType: 'FASTING' }
-])
+const intervalMinutes = ref(5)
+const actualPredictHours = ref(0)
 
 const maxPredicted = computed(() => {
   if (predictedData.value.length === 0) return 0
@@ -264,32 +221,6 @@ const avgPredicted = computed(() => {
   return predictedData.value.reduce((a, b) => a + b, 0) / predictedData.value.length
 })
 
-const getMeasureTypeText = (type) => {
-  const types = { FASTING: '空腹', POSTPRANDIAL: '餐后', RANDOM: '随机' }
-  return types[type] || '未知'
-}
-
-const getGlucoseStatus = (value) => {
-  if (value < 3.9) return '偏低'
-  if (value <= 6.1) return '正常'
-  if (value <= 7.0) return '偏高'
-  return '过高'
-}
-
-const getGlucoseTag = (value) => {
-  if (value < 3.9) return 'warning'
-  if (value <= 6.1) return 'success'
-  if (value <= 7.0) return 'warning'
-  return 'danger'
-}
-
-const getGlucoseClass = (value) => {
-  if (value < 3.9) return 'glucose-low'
-  if (value <= 6.1) return 'glucose-normal'
-  if (value <= 7.0) return 'glucose-high'
-  return 'glucose-danger'
-}
-
 const MMOL_TO_MGDL_FACTOR = 18
 
 const mmolToMgdl = (mmol) => {
@@ -305,12 +236,12 @@ const generateTimeLabels = (historyCount, predictCount) => {
   const now = new Date()
   
   for (let i = historyCount - 1; i >= 0; i--) {
-    const time = new Date(now - i * 5 * 60 * 1000)
+    const time = new Date(now - i * intervalMinutes.value * 60 * 1000)
     labels.push(time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
   }
   
   for (let i = 1; i <= predictCount; i++) {
-    const time = new Date(now.getTime() + i * 5 * 60 * 1000)
+    const time = new Date(now.getTime() + i * intervalMinutes.value * 60 * 1000)
     labels.push(time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
   }
   
@@ -328,7 +259,7 @@ const updateChart = () => {
   if (!chartInstance) return
 
   const historyData = [predictionForm.cbg]
-  const predictCount = predictionForm.predictHours * 12
+  const predictCount = predictedData.value.length
   const timeLabels = generateTimeLabels(historyData.length, predictCount)
 
   const historySeriesData = historyData.map((v, i) => [i, v])
@@ -446,10 +377,11 @@ const handlePredict = async () => {
     })
     
     if (res.code === 0 && res.data) {
-      const predictedValuesMgdl = res.data.predictedValues || []
-      predictedData.value = predictedValuesMgdl.map(mgdl => mgdlToMmol(mgdl))
-      predictedTimes.value = res.data.predictedTimes || []
-      confidence.value = res.data.confidence || 0.85
+      const glucoseMgDl = res.data.glucoseMgDl || []
+      intervalMinutes.value = res.data.intervalMinutes || 5
+      actualPredictHours.value = res.data.predictHours || predictionForm.predictHours
+      
+      predictedData.value = glucoseMgDl.map(mgdl => mgdlToMmol(mgdl))
       
       const avgValue = avgPredicted.value
       if (avgValue < 3.9) {
@@ -485,35 +417,10 @@ const handlePredict = async () => {
     }
   } catch (error) {
     console.error('预测失败:', error)
-    predictedData.value = generateMockPrediction()
-    confidence.value = 0.75
-    predictionResult.value = {
-      level: '血糖控制良好',
-      alertType: 'success',
-      suggestion: '根据您的血糖数据，预测未来血糖水平将保持在正常范围内。建议继续保持规律的生活作息和合理的饮食习惯。'
-    }
-    updateChart()
-    ElMessage.warning('使用模拟数据展示预测结果')
+    ElMessage.error('预测失败，请检查网络连接或稍后重试')
   } finally {
     predicting.value = false
   }
-}
-
-const generateMockPrediction = () => {
-  const lastValue = predictionForm.cbg
-  const count = predictionForm.predictHours * 12
-  const predictions = []
-  
-  for (let i = 0; i < count; i++) {
-    const variation = (Math.random() - 0.5) * 1.5
-    predictions.push(Math.max(3.5, Math.min(12, lastValue + variation)))
-  }
-  
-  return predictions
-}
-
-const loadMoreHistory = () => {
-  ElMessage.info('加载更多历史数据')
 }
 
 const handleResize = () => {
@@ -562,36 +469,6 @@ onUnmounted(() => {
   }
 }
 
-.reference-info {
-  .reference-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 0;
-    border-bottom: 1px solid #ebeef5;
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    .label {
-      color: #606266;
-    }
-
-    .value {
-      color: #303133;
-      font-weight: 500;
-      
-      &.warning {
-        color: #e6a23c;
-      }
-      
-      &.danger {
-        color: #f56c6c;
-      }
-    }
-  }
-}
-
 .field-unit {
   margin-left: 8px;
   color: #909399;
@@ -603,22 +480,6 @@ onUnmounted(() => {
     margin: 12px 0;
     font-size: 12px;
   }
-}
-
-.glucose-low {
-  color: #e6a23c;
-}
-
-.glucose-normal {
-  color: #67c23a;
-}
-
-.glucose-high {
-  color: #e6a23c;
-}
-
-.glucose-danger {
-  color: #f56c6c;
 }
 
 .mt-20 {
