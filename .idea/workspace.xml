@@ -5,9 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9336f976-70a0-4e88-9f96-aa387f1874a6" name="Changes" comment="init">
-      <change afterPath="$PROJECT_DIR$/../glucose-predict-model/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/client/PythonPredictClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/resources/bootstrap.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/resources/bootstrap.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env.development" beforeDir="false" afterPath="$PROJECT_DIR$/.env.development" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env.production" beforeDir="false" afterPath="$PROJECT_DIR$/.env.production" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/api/glucose.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/glucose.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/common/Sidebar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/common/Sidebar.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/router/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/auth/Login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/auth/Login.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/Dashboard.vue" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vite.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/vite.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../glucose-predict-model/api_server.py" beforeDir="false" afterPath="$PROJECT_DIR$/../glucose-predict-model/api_server.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -89,6 +100,7 @@
       <workItem from="1775372858188" duration="7079000" />
       <workItem from="1775446926659" duration="1115000" />
       <workItem from="1775918989963" duration="32000" />
+      <workItem from="1777986006447" duration="7320000" />
     </task>
     <task id="LOCAL-00001" summary="init">
       <option name="closed" value="true" />

@@ -180,8 +180,8 @@ const predicting = ref(false)
 let chartInstance = null
 
 const predictionForm = reactive({
-  cbg: 5.8,
-  finger: 5.5,
+  cbg: 5.0,
+  finger: 5.0,
   basal: 0.5,
   hr: 75,
   gsr: 5.0,
@@ -267,6 +267,13 @@ const updateChart = () => {
     ? predictedData.value.map((v, i) => [historyData.length + i, v])
     : []
 
+  const allValues = [...historyData, ...predictedData.value]
+  const dataMin = allValues.length > 0 ? Math.min(...allValues) : 3
+  const dataMax = allValues.length > 0 ? Math.max(...allValues) : 15
+  const range = dataMax - dataMin || 2
+  const yMin = Math.max(0, Math.floor(dataMin - range * 0.3))
+  const yMax = Math.ceil(dataMax + range * 0.3)
+
   const option = {
     tooltip: {
       trigger: 'axis',
@@ -302,8 +309,8 @@ const updateChart = () => {
     yAxis: {
       type: 'value',
       name: '血糖值(mmol/L)',
-      min: 3,
-      max: 15,
+      min: yMin,
+      max: yMax,
       splitLine: {
         lineStyle: {
           type: 'dashed'
@@ -376,12 +383,20 @@ const handlePredict = async () => {
       predictHours: predictionForm.predictHours
     })
     
-    if (res.code === 0 && res.data) {
-      const glucoseMgDl = res.data.glucoseMgDl || []
-      intervalMinutes.value = res.data.intervalMinutes || 5
-      actualPredictHours.value = res.data.predictHours || predictionForm.predictHours
+    const result = res && res.data ? res.data : res
+    
+    if (result && (result.predictedValues || result.predictedValuesMmol)) {
+      intervalMinutes.value = 5
+      actualPredictHours.value = result.predictedTimes
+        ? Math.round(result.predictedTimes.length / 12)
+        : predictionForm.predictHours
       
-      predictedData.value = glucoseMgDl.map(mgdl => mgdlToMmol(mgdl))
+      if (result.predictedValuesMmol && result.predictedValuesMmol.length > 0) {
+        predictedData.value = result.predictedValuesMmol
+      } else {
+        const predictedValuesMgDl = result.predictedValues || []
+        predictedData.value = predictedValuesMgDl.map(mgdl => mgdlToMmol(mgdl))
+      }
       
       const avgValue = avgPredicted.value
       if (avgValue < 3.9) {
@@ -413,11 +428,10 @@ const handlePredict = async () => {
       updateChart()
       ElMessage.success('预测完成')
     } else {
-      ElMessage.error(res.message || '预测失败')
+      ElMessage.error('预测返回数据异常')
     }
   } catch (error) {
     console.error('预测失败:', error)
-    ElMessage.error('预测失败，请检查网络连接或稍后重试')
   } finally {
     predicting.value = false
   }

@@ -43,15 +43,9 @@ const routes = [
   {
     path: '/patient',
     component: () => import('@/layouts/DefaultLayout.vue'),
-    redirect: '/patient/dashboard',
+    redirect: '/patient/health-report',
     meta: { roles: ['PATIENT'] },
     children: [
-      {
-        path: 'dashboard',
-        name: 'PatientDashboard',
-        component: () => import('@/views/patient/Dashboard.vue'),
-        meta: { title: '患者首页', requiresAuth: true, roles: ['PATIENT'] }
-      },
       {
         path: 'health-report',
         name: 'PatientHealthReport',
@@ -242,7 +236,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.roles && to.meta.roles.length > 0) {
     if (!userStore.hasAnyRole(to.meta.roles)) {
       if (userStore.hasRole('PATIENT')) {
-        next({ name: 'PatientDashboard' })
+        next({ name: 'PatientHealthReport' })
       } else if (userStore.hasRole('DOCTOR')) {
         next({ name: 'DoctorSchedule' })
       } else if (userStore.hasRole('ADMIN')) {
@@ -256,7 +250,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.name === 'Workbench' || to.name === 'Dashboard') {
     if (userStore.hasRole('PATIENT')) {
-      next({ name: 'PatientDashboard' })
+      next({ name: 'PatientHealthReport' })
       return
     } else if (userStore.hasRole('DOCTOR')) {
       next({ name: 'DoctorSchedule' })

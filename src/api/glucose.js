@@ -2,7 +2,7 @@ import { post } from '@/utils/request'
 
 export const glucoseApi = {
   predictGlucose(data) {
-    return post('/api/v1/glucose/predict', {
+    return post('/glucose/predict', {
       cbg: data.cbg,
       finger: data.finger,
       basal: data.basal,

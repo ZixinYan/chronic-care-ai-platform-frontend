@@ -40,7 +40,6 @@
               <el-icon><User /></el-icon>
               <span>患者中心</span>
             </template>
-            <el-menu-item index="/patient/dashboard">患者首页</el-menu-item>
             <el-menu-item index="/patient/glucose-prediction">血糖预测</el-menu-item>
             <el-menu-item index="/patient/health-report">报告解析</el-menu-item>
             <el-menu-item index="/patient/appointment">预约医生</el-menu-item>

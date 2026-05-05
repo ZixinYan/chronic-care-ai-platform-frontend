@@ -289,7 +289,7 @@ const handleLoginSuccess = (data) => {
     
     const roles = data.role || []
     if (roles.includes('PATIENT')) {
-      router.push('/patient/dashboard')
+      router.push('/patient/health-report')
     } else if (roles.includes('DOCTOR')) {
       router.push('/doctor/schedule')
     } else if (roles.includes('ADMIN')) {

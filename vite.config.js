@@ -17,6 +17,11 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:11000',
         changeOrigin: true
+      },
+      '/python-api': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/python-api/, '')
       }
     }
   }
