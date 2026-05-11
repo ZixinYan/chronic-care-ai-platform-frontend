@@ -60,7 +60,7 @@
             <el-form-item label="CGM血糖值" prop="cbg">
               <el-input-number 
                 v-model="predictionForm.cbg" 
-                :min="1" 
+                :min="0" 
                 :max="30" 
                 :precision="1" 
                 :step="0.1"
@@ -71,7 +71,7 @@
             <el-form-item label="指尖血血糖" prop="finger">
               <el-input-number 
                 v-model="predictionForm.finger" 
-                :min="1" 
+                :min="0" 
                 :max="30" 
                 :precision="1" 
                 :step="0.1"
@@ -119,7 +119,7 @@
             <el-form-item label="心率" prop="hr">
               <el-input-number 
                 v-model="predictionForm.hr" 
-                :min="40" 
+                :min="0" 
                 :max="200" 
                 :precision="0" 
                 :step="1"

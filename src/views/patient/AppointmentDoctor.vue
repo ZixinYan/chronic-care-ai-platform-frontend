@@ -86,7 +86,7 @@
               ref="appointmentFormRef" 
               :model="appointmentForm" 
               :rules="appointmentRules" 
-              label-width="80px"
+              label-width="85px"
               class="mt-20"
             >
               <el-form-item label="预约日期" prop="appointmentDate">
@@ -476,5 +476,18 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 20px;
+}
+
+// 防止右侧表单 label 文字换行
+:deep(.el-form-item__label) {
+  white-space: nowrap;
+}
+
+// 右侧预约表单容器宽度优化
+.appointment-form-wrapper {
+  .el-select,
+  .el-date-picker {
+    width: 100%;
+  }
 }
 </style>

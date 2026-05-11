@@ -125,15 +125,9 @@ const routes = [
   {
     path: '/admin',
     component: () => import('@/layouts/DefaultLayout.vue'),
-    redirect: '/admin/workbench',
+    redirect: '/admin/users',
     meta: { roles: ['ADMIN'] },
     children: [
-      {
-        path: 'workbench',
-        name: 'AdminWorkbench',
-        component: () => import('@/views/admin/Workbench.vue'),
-        meta: { title: '管理后台', requiresAuth: true, roles: ['ADMIN'] }
-      },
       {
         path: 'users',
         name: 'AdminUsers',
@@ -218,15 +212,15 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title ? `${to.meta.title} - 慢病管理AI平台` : '慢病管理AI平台'
-
-  const authStore = useAuthStore()
-  const userStore = useUserStore()
+  document.title = to.meta.title ? `${to.meta.title} - 诊疗辅助系统` : '诊疗辅助系统'
 
   if (to.meta.requiresAuth === false) {
     next()
     return
   }
+
+  const authStore = useAuthStore()
+  const userStore = useUserStore()
 
   if (!authStore.isAuthenticated) {
     next({ name: 'Login', query: { redirect: to.fullPath } })
@@ -234,29 +228,17 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.roles && to.meta.roles.length > 0) {
-    if (!userStore.hasAnyRole(to.meta.roles)) {
+    const hasRequiredRole = userStore.hasAnyRole(to.meta.roles)
+    if (!hasRequiredRole) {
       if (userStore.hasRole('PATIENT')) {
         next({ name: 'PatientHealthReport' })
       } else if (userStore.hasRole('DOCTOR')) {
         next({ name: 'DoctorSchedule' })
       } else if (userStore.hasRole('ADMIN')) {
-        next({ name: 'AdminWorkbench' })
+        next({ name: 'AdminUsers' })
       } else {
         next({ name: 'Workbench' })
       }
-      return
-    }
-  }
-
-  if (to.name === 'Workbench' || to.name === 'Dashboard') {
-    if (userStore.hasRole('PATIENT')) {
-      next({ name: 'PatientHealthReport' })
-      return
-    } else if (userStore.hasRole('DOCTOR')) {
-      next({ name: 'DoctorSchedule' })
-      return
-    } else if (userStore.hasRole('ADMIN')) {
-      next({ name: 'AdminWorkbench' })
       return
     }
   }

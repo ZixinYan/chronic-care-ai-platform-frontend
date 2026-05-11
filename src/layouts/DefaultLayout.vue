@@ -11,7 +11,7 @@
         <Breadcrumb />
         <div class="main-content">
           <router-view v-slot="{ Component }">
-            <transition name="fade" mode="out-in">
+            <transition name="fade-slide" mode="out-in">
               <component :is="Component" />
             </transition>
           </router-view>
@@ -48,7 +48,7 @@ const fetchUserInfo = async () => {
     return
   }
   
-  if (userStore.userInfo && userStore.avatar) {
+  if (userStore.userInfo && userStore.roles.length > 0) {
     return
   }
 
@@ -77,8 +77,14 @@ const fetchUserInfo = async () => {
   }
 }
 
+let isFetching = false
 onMounted(() => {
-  fetchUserInfo()
+  if (!isFetching) {
+    isFetching = true
+    fetchUserInfo().finally(() => {
+      isFetching = false
+    })
+  }
 })
 </script>
 
@@ -89,34 +95,57 @@ onMounted(() => {
 }
 
 .layout-aside {
-  background-color: #304156;
-  transition: width 0.3s;
+  background: linear-gradient(180deg, #1a1f36 0%, #16213e 40%, #0f3460 100%);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+  z-index: 2;
 }
 
 .layout-main {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-color: #f0f2f5;
 }
 
 .layout-header {
-  height: 60px;
+  height: 64px;
   padding: 0;
-  background-color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 1px 8px rgba(0, 21, 41, 0.06);
   z-index: 10;
 }
 
 .layout-content {
   flex: 1;
   padding: 0;
-  background-color: #f5f7fa;
+  background-color: #f0f2f5;
   overflow: auto;
 }
 
 .main-content {
   padding: 20px;
-  min-height: calc(100vh - 60px - 40px);
+  min-height: calc(100vh - 64px - 40px);
+}
+
+.fade-slide-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

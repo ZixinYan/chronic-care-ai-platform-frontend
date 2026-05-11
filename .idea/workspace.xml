@@ -5,20 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9336f976-70a0-4e88-9f96-aa387f1874a6" name="Changes" comment="init">
-      <change afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/client/PythonPredictClient.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/java/com/zixin/bloodglucoseprovider/service/GlucosePredictionServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/resources/bootstrap.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../blood-glucose-service/blood-glucose-provider/src/main/resources/bootstrap.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.env.development" beforeDir="false" afterPath="$PROJECT_DIR$/.env.development" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.env.production" beforeDir="false" afterPath="$PROJECT_DIR$/.env.production" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/glucose.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/glucose.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/auth.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/assets/styles/global.scss" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/styles/global.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/assets/styles/variables.scss" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/styles/variables.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/common/Breadcrumb.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/common/Breadcrumb.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/common/Header.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/common/Header.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/common/Sidebar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/common/Sidebar.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/layouts/DefaultLayout.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/layouts/DefaultLayout.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/router/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/request.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/admin/Workbench.vue" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/views/auth/Login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/auth/Login.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/patient/Dashboard.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/auth/Register.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/auth/Register.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/AppointmentDoctor.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/AppointmentDoctor.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/GlucosePrediction.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vite.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/vite.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../glucose-predict-model/api_server.py" beforeDir="false" afterPath="$PROJECT_DIR$/../glucose-predict-model/api_server.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/patient/ReportDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/patient/ReportDetail.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/workbench/Index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/workbench/Index.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,12 +61,13 @@
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/personal_work/chronic-care-ai-platform/chronic-care-frontend&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;G:/Biancheng/intelligent-analysis-platform/src/frontend&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_interpreter_path&quot;: &quot;C:/Users/admin/AppData/Roaming/JetBrains/WebStorm2025.2/node/versions/24.14.1/node&quot;,
+    &quot;nodejs_interpreter_path&quot;: &quot;node&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;npm.dev.executor&quot;: &quot;Run&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;settings.vue&quot;,
@@ -84,10 +90,11 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-3aa1da707db6-JavaScript-WS-252.26830.93" />
+        <option value="bundled-js-predefined-d6986cc7102b-deb605915726-JavaScript-WS-243.22562.222" />
       </set>
     </attachedChunks>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="9336f976-70a0-4e88-9f96-aa387f1874a6" name="Changes" comment="" />
@@ -101,6 +108,11 @@
       <workItem from="1775446926659" duration="1115000" />
       <workItem from="1775918989963" duration="32000" />
       <workItem from="1777986006447" duration="7320000" />
+      <workItem from="1778241544231" duration="2313000" />
+      <workItem from="1778329729337" duration="129000" />
+      <workItem from="1778407090973" duration="630000" />
+      <workItem from="1778416888040" duration="387000" />
+      <workItem from="1778469558653" duration="8884000" />
     </task>
     <task id="LOCAL-00001" summary="init">
       <option name="closed" value="true" />

@@ -4,7 +4,6 @@
       <el-icon class="is-loading" :size="40"><Loading /></el-icon>
       <p>加载中...</p>
     </div>
-    <AdminWorkbench v-else-if="isAdmin" />
     <el-tabs v-else-if="visibleTabs.length > 0" v-model="activeTab" type="border-card" @tab-change="handleTabChange">
       <el-tab-pane
         v-for="tab in visibleTabs"
@@ -23,12 +22,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, shallowRef, defineAsyncComponent, watch } from 'vue'
+import { ref, computed, onMounted, shallowRef, markRaw } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useAuthStore } from '@/stores/auth'
 import { Loading } from '@element-plus/icons-vue'
-import AdminWorkbench from '@/views/admin/Workbench.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,13 +37,13 @@ const loading = ref(true)
 const activeTab = ref('')
 
 const tabComponents = {
-  Schedule: shallowRef(defineAsyncComponent(() => import('@/views/doctor/Schedule.vue'))),
-  LeaveRequest: shallowRef(defineAsyncComponent(() => import('@/views/doctor/LeaveRequest.vue'))),
-  ReportApproval: shallowRef(defineAsyncComponent(() => import('@/views/doctor/ReportApproval.vue'))),
-  GlucosePrediction: shallowRef(defineAsyncComponent(() => import('@/views/patient/GlucosePrediction.vue'))),
-  HealthReport: shallowRef(defineAsyncComponent(() => import('@/views/patient/HealthReport.vue'))),
-  AppointmentDoctor: shallowRef(defineAsyncComponent(() => import('@/views/patient/AppointmentDoctor.vue'))),
-  Patients: shallowRef(defineAsyncComponent(() => import('@/views/doctor/Patients.vue')))
+  Schedule: markRaw(shallowRef(defineAsyncComponent(() => import('@/views/doctor/Schedule.vue')))),
+  LeaveRequest: markRaw(shallowRef(defineAsyncComponent(() => import('@/views/doctor/LeaveRequest.vue')))),
+  ReportApproval: markRaw(shallowRef(defineAsyncComponent(() => import('@/views/doctor/ReportApproval.vue')))),
+  GlucosePrediction: markRaw(shallowRef(defineAsyncComponent(() => import('@/views/patient/GlucosePrediction.vue')))),
+  HealthReport: markRaw(shallowRef(defineAsyncComponent(() => import('@/views/patient/HealthReport.vue')))),
+  AppointmentDoctor: markRaw(shallowRef(defineAsyncComponent(() => import('@/views/patient/AppointmentDoctor.vue')))),
+  Patients: markRaw(shallowRef(defineAsyncComponent(() => import('@/views/doctor/Patients.vue'))))
 }
 
 const allTabs = {
@@ -112,17 +110,17 @@ const handleLogout = () => {
   router.push('/login')
 }
 
-watch(roles, (newRoles) => {
-  if (newRoles && newRoles.length > 0) {
-    initTabs()
-  }
-}, { immediate: true })
-
 onMounted(() => {
   if (roles.value && roles.value.length > 0) {
     initTabs()
   } else {
-    loading.value = false
+    setTimeout(() => {
+      if (roles.value && roles.value.length > 0) {
+        initTabs()
+      } else {
+        loading.value = false
+      }
+    }, 500)
   }
 })
 </script>

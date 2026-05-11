@@ -3,7 +3,7 @@
     <div class="register-box">
       <div class="register-header">
         <h2>用户注册</h2>
-        <p>创建您的慢病管理AI平台账号</p>
+        <p>创建您的诊疗辅助系统账号</p>
       </div>
 
       <el-form
@@ -17,8 +17,11 @@
           <el-input
             v-model="registerForm.username"
             placeholder="请输入用户名（4-16位字母数字）"
-            prefix-icon="User"
-          />
+          >
+            <template #prefix>
+              <el-icon><User /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
 
         <el-form-item prop="password" label="密码">
@@ -26,9 +29,12 @@
             v-model="registerForm.password"
             type="password"
             placeholder="请输入密码（6-20位）"
-            prefix-icon="Lock"
             show-password
-          />
+          >
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
 
         <el-form-item prop="confirmPassword" label="确认密码">
@@ -36,17 +42,23 @@
             v-model="registerForm.confirmPassword"
             type="password"
             placeholder="请再次输入密码"
-            prefix-icon="Lock"
             show-password
-          />
+          >
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
 
         <el-form-item prop="phone" label="手机号">
           <el-input
             v-model="registerForm.phone"
             placeholder="请输入手机号"
-            prefix-icon="Phone"
-          />
+          >
+            <template #prefix>
+              <el-icon><Phone /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
 
         <el-form-item prop="code" label="验证码">
@@ -54,9 +66,12 @@
             <el-input
               v-model="registerForm.code"
               placeholder="请输入验证码"
-              prefix-icon="Message"
               maxlength="6"
-            />
+            >
+              <template #prefix>
+                <el-icon><Message /></el-icon>
+              </template>
+            </el-input>
             <el-button
               :disabled="countdown > 0"
               @click="handleSendCode"
@@ -70,16 +85,22 @@
           <el-input
             v-model="registerForm.realName"
             placeholder="请输入真实姓名"
-            prefix-icon="UserFilled"
-          />
+          >
+            <template #prefix>
+              <el-icon><UserFilled /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
 
         <el-form-item prop="idCard" label="身份证号">
           <el-input
             v-model="registerForm.idCard"
             placeholder="请输入身份证号"
-            prefix-icon="Postcard"
-          />
+          >
+            <template #prefix>
+              <el-icon><Postcard /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
 
         <el-form-item prop="role" label="用户角色">
@@ -91,7 +112,7 @@
 
         <template v-if="registerForm.role === 'DOCTOR'">
           <div class="role-section-title">医生信息</div>
-          
+
           <el-form-item prop="doctor.department" label="科室">
             <el-select v-model="registerForm.doctor.department" placeholder="请选择科室" style="width: 100%">
               <el-option label="内科" value="内科" />
@@ -136,7 +157,7 @@
 
         <template v-if="registerForm.role === 'PATIENT'">
           <div class="role-section-title">患者信息</div>
-          
+
           <el-row :gutter="20">
             <el-col :span="8">
               <el-form-item prop="patient.bloodType" label="血型">
@@ -230,6 +251,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { User, Lock, Phone, Message, UserFilled, Postcard } from '@element-plus/icons-vue'
 import authApi from '@/api/auth'
 import { isValidPhone, isValidUsername, isValidPassword, isValidRealName, isValidIdCard, isValidSmsCode } from '@/utils/validate'
 
@@ -344,6 +366,24 @@ const validateAgreement = (rule, value, callback) => {
   }
 }
 
+const validateEmergencyContact = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入紧急联系人姓名'))
+  } else {
+    callback()
+  }
+}
+
+const validateEmergencyPhone = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入紧急联系人电话'))
+  } else if (!isValidPhone(value)) {
+    callback(new Error('请输入正确的手机号'))
+  } else {
+    callback()
+  }
+}
+
 const registerRules = {
   username: [{ required: true, validator: validateUsername, trigger: 'blur' }],
   password: [{ required: true, validator: validatePassword, trigger: 'blur' }],
@@ -353,7 +393,9 @@ const registerRules = {
   realName: [{ required: true, validator: validateRealName, trigger: 'blur' }],
   idCard: [{ required: true, validator: validateIdCard, trigger: 'blur' }],
   role: [{ required: true, message: '请选择用户角色', trigger: 'change' }],
-  agreement: [{ required: true, validator: validateAgreement, trigger: 'change' }]
+  agreement: [{ required: true, validator: validateAgreement, trigger: 'change' }],
+  'patient.emergencyContact': [{ required: true, validator: validateEmergencyContact, trigger: 'blur' }],
+  'patient.emergencyPhone': [{ required: true, validator: validateEmergencyPhone, trigger: 'blur' }]
 }
 
 let timer = null
@@ -412,7 +454,7 @@ const handleRegister = async () => {
         'DOCTOR': 1,
         'PATIENT': 2
       }
-      
+
       const requestData = {
         username: registerForm.username,
         password: registerForm.password,

@@ -53,22 +53,30 @@ watch(
 
 <style lang="scss" scoped>
 .breadcrumb-container {
-  padding: 16px 20px;
-  background-color: #fff;
-  border-bottom: 1px solid #ebeef5;
+  padding: 14px 24px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
 .no-redirect {
-  color: #97a8be;
+  color: #8c8c8c;
   cursor: text;
+  font-weight: 500;
 }
 
 a {
-  color: #606266;
+  color: #595959;
   cursor: pointer;
+  font-weight: 400;
+  transition: color 0.3s;
 
   &:hover {
-    color: #409eff;
+    color: #4096ff;
   }
+}
+
+:deep(.el-breadcrumb__separator) {
+  color: #d9d9d9;
 }
 </style>

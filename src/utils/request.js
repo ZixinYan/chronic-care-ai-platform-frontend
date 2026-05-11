@@ -55,27 +55,36 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
   (response) => {
     console.log(`%c[API Response] ${response.config.method?.toUpperCase()} ${response.config.baseURL}${response.config.url}`, 'color: #2196F3; font-weight: bold', response.data)
-    const { data } = response
-    if (data.code === 0) {
-      return data
-    } else {
-      ElMessage.error(data.msg || data.message || '请求失败')
-      return Promise.reject(data)
-    }
+    return response.data
   },
   async (error) => {
     const { response } = error
+    const originalRequest = error.config
+    
     console.error(`%c[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.baseURL}${error.config?.url}`, 'color: #f44336; font-weight: bold', {
       status: response?.status,
       message: error.message,
       data: response?.data
     })
+    
     if (response) {
       switch (response.status) {
         case 401: {
+          if (originalRequest._retry) {
+            const authStore = useAuthStore()
+            const userStore = useUserStore()
+            authStore.clearAuth()
+            userStore.clearUser()
+            router.push('/login')
+            ElMessage.error('登录已过期，请重新登录')
+            return Promise.reject(error)
+          }
+          
+          originalRequest._retry = true
           const authStore = useAuthStore()
           const userStore = useUserStore()
           const refreshToken = authStore.getRefreshToken()
+          
           if (refreshToken) {
             try {
               const res = await axios.post(`${baseURL}/auth/refresh`, {
@@ -83,7 +92,7 @@ instance.interceptors.response.use(
               })
               if (res.data.code === 0) {
                 authStore.setTokens(res.data.data)
-                return instance(response.config)
+                return instance(originalRequest)
               } else {
                 authStore.clearAuth()
                 userStore.clearUser()
@@ -114,6 +123,10 @@ instance.interceptors.response.use(
           ElMessage.error('服务器错误')
           break
         default:
+          if (response.data && response.data.msg) {
+            ElMessage.error(response.data.msg)
+            return response.data
+          }
           ElMessage.error(response.data?.message || '请求失败')
       }
     } else {

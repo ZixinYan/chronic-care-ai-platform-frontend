@@ -547,7 +547,11 @@ const sendReportToDoctor = async () => {
       ElMessage.success('报告已成功发送给医生')
       fetchReportDetail()
     } else {
-      ElMessage.error(res.message || '发送失败')
+      const errorMsg = res.msg || res.message || '发送失败'
+      ElMessageBox.alert(errorMsg, '提示', {
+        confirmButtonText: '确定',
+        type: 'warning'
+      })
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -592,7 +596,10 @@ const switchDoctor = async () => {
       switchDoctorDialogVisible.value = false
       fetchReportDetail()
     } else {
-      ElMessage.error(res.message || '切换失败')
+      ElMessageBox.alert(res.msg || res.message || '切换失败', '提示', {
+        confirmButtonText: '确定',
+        type: 'warning'
+      })
     }
   } catch (error) {
     if (error !== 'cancel') {

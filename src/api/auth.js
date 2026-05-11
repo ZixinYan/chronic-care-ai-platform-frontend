@@ -5,6 +5,10 @@ export const authApi = {
     return post('/auth/login', data)
   },
 
+  loginWithPhone(data) {
+    return post('/auth/login/phone', data)
+  },
+
   register(data) {
     return post('/auth/register', data)
   },
